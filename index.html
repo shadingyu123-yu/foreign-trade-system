@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>外贸管理系统</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #1a73e8;
+    --primary-dark: #1557b0;
+    --success: #34a853;
+    --warning: #fbbc04;
+    --danger: #ea4335;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --border: #e0e0e0;
+    --text: #202124;
+    --text-secondary: #5f6368;
+    --sidebar-width: 220px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar {
+    width: var(--sidebar-width); background: #1e2a3a; color: #fff;
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .sidebar-logo {
+    padding: 20px 16px 16px; font-size: 16px; font-weight: 700;
+    border-bottom: 1px solid rgba(255,255,255,0.1); letter-spacing: 0.5px;
+  }
+  .sidebar-logo span { color: #4fc3f7; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 13px 16px;
+    cursor: pointer; transition: background 0.15s; font-size: 14px; color: rgba(255,255,255,0.75);
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .nav-item.active { background: var(--primary); color: #fff; }
+  .nav-item svg { flex-shrink: 0; }
+  .sidebar-section { padding: 16px 16px 6px; font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Main */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .topbar h1 { font-size: 18px; font-weight: 600; }
+  .topbar-actions { display: flex; gap: 8px; }
+
+  /* Rate cards (dashboard) */
+  .rate-card {
+    border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .rate-card:hover { border-color: var(--primary); background: #f0f7ff; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(26,115,232,0.12); }
+  .rc-cur { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 1px; }
+  .rc-name { font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; }
+  .rc-rate { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .rc-chg { font-size: 12px; }
+  .rc-up { color: var(--success); }
+  .rc-down { color: var(--danger); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .rate-loading { animation: pulse 1.5s infinite; color: var(--text-secondary); font-size: 13px; }
+  .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+
+  /* Stat cards */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; }
+  .stat-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .stat-value { font-size: 24px; font-weight: 700; }
+  .stat-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  .text-success { color: var(--success); }
+  .text-danger { color: var(--danger); }
+  .text-warning { color: var(--warning); }
+  .text-primary { color: var(--primary); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 500; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #2e7d45; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #c5271e; }
+  .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+  .btn-outline:hover { background: #e8f0fe; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--bg); }
+
+  /* Forms */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+  .form-group input, .form-group select, .form-group textarea {
+    border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+    font-size: 13px; color: var(--text); background: var(--bg); transition: border 0.15s;
+    font-family: inherit;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none; border-color: var(--primary); background: #fff;
+  }
+  .form-group textarea { resize: vertical; min-height: 70px; }
+
+  /* Table */
+  .table-wrapper { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: var(--bg); padding: 10px 12px; text-align: left;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--text-secondary); border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #f8f9fa; }
+
+  /* Tags */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;
+  }
+  .badge-success { background: #e6f4ea; color: var(--success); }
+  .badge-warning { background: #fef7e0; color: #a07000; }
+  .badge-danger { background: #fce8e6; color: var(--danger); }
+  .badge-info { background: #e8f0fe; color: var(--primary); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 100; align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--card); border-radius: 10px; padding: 24px;
+    width: 90%; max-width: 640px; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .modal-header h3 { font-size: 16px; font-weight: 600; }
+  .modal-close { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 20px; line-height: 1; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .tab { padding: 10px 16px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-secondary); border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .tab:hover { color: var(--text); }
+
+  /* Sections */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Profit calculator */
+  .calc-result { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: #fff; border-radius: 10px; padding: 20px; margin-top: 20px; }
+  .calc-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .calc-result-item { }
+  .calc-result-item .label { font-size: 12px; opacity: 0.8; margin-bottom: 4px; }
+  .calc-result-item .value { font-size: 20px; font-weight: 700; }
+  .calc-breakdown { background: var(--bg); border-radius: 8px; padding: 16px; margin-top: 16px; }
+  .calc-breakdown-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px dashed var(--border); }
+  .calc-breakdown-row:last-child { border-bottom: none; font-weight: 600; }
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  /* Quote */
+  .quote-preview {
+    background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 32px;
+    font-size: 13px; line-height: 1.6;
+  }
+  .quote-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .quote-company { font-size: 20px; font-weight: 700; color: var(--primary); }
+  .quote-meta { text-align: right; color: var(--text-secondary); font-size: 12px; }
+  .quote-meta strong { color: var(--text); font-size: 14px; display: block; margin-bottom: 4px; }
+  .quote-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; padding: 16px; background: var(--bg); border-radius: 6px; font-size: 12px; }
+  .quote-party-title { font-weight: 600; margin-bottom: 6px; font-size: 13px; }
+  .quote-table table { width: 100%; }
+  .quote-table thead th { background: var(--primary); color: #fff; padding: 8px 12px; font-size: 12px; text-transform: none; letter-spacing: 0; }
+  .quote-table tbody td { padding: 8px 12px; }
+  .quote-totals { margin-top: 12px; text-align: right; }
+  .quote-totals .total-row { display: flex; justify-content: flex-end; gap: 40px; padding: 4px 0; font-size: 13px; }
+  .quote-totals .total-final { font-size: 16px; font-weight: 700; color: var(--primary); border-top: 2px solid var(--primary); padding-top: 8px; margin-top: 4px; }
+  .quote-terms { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-secondary); }
+  .quote-terms strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+  /* Product picker */
+  .product-picker { max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
+  .product-picker-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .product-picker-item:last-child { border-bottom: none; }
+  .product-picker-item:hover { background: #e8f0fe; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 48px 24px; color: var(--text-secondary); }
+  .empty svg { opacity: 0.3; margin-bottom: 12px; }
+  .empty p { font-size: 14px; }
+
+  /* Alert */
+  .alert { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; }
+  .alert-info { background: #e8f0fe; color: var(--primary); border: 1px solid #c5d8fb; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    :root { --sidebar-width: 56px; }
+    .nav-item span { display: none; }
+    .sidebar-logo { font-size: 0; }
+    .sidebar-logo span { font-size: 18px; }
+    .sidebar-section { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">外贸<span>Pro</span></div>
+  <div class="sidebar-section">主菜单</div>
+  <div class="nav-item active" onclick="showPage('dashboard')">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span>总览</span>
+  </div>
+  <div class="nav-item" onclick="showPage('inventory')">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    <span>库存管理</span>
+  </div>
+  <div class="nav-item" onclick="showPage('profit')">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    <span>利润测算</span>
+  </div>
+  <div class="nav-item" onclick="showPage('quote')">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    <span>报价单</span>
+  </div>
+  <div class="sidebar-section" style="margin-top:auto">设置</div>
+  <div class="nav-item" onclick="showPage('settings')">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+    <span>公司设置</span>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <h1 id="page-title">总览</h1>
+    <div class="topbar-actions" id="topbar-actions"></div>
+  </div>
+  <div class="content">
+
+    <!-- Dashboard -->
+    <div id="page-dashboard" class="page active">
+      <div class="stats-row" id="dashboard-stats"></div>
+
+      <!-- 实时汇率卡片 -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div>
+            <span class="card-title" style="margin:0">实时汇率</span>
+            <span style="font-size:11px;color:var(--text-secondary);margin-left:8px">对人民币 · 点击任意货币可应用到利润测算</span>
+          </div>
+          <span id="rate-update-time" style="font-size:11px;color:var(--text-secondary)"></span>
+        </div>
+        <div id="rate-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px">
+          <div class="rate-loading" style="padding:8px">正在获取汇率数据…</div>
+        </div>
+      </div>
+
+      <!-- 7日折线图 -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div>
+            <span class="card-title" style="margin:0">近7日汇率走势</span>
+            <span style="font-size:11px;color:var(--text-secondary);margin-left:8px">相对7天前的涨跌幅（%）· 点击下方标签显示/隐藏</span>
+          </div>
+          <div id="rate-chart-toggles" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        </div>
+        <canvas id="rate-chart" style="max-height:220px"></canvas>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div class="card-title">库存预警</div>
+          <div id="low-stock-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">最近报价单</div>
+          <div id="recent-quotes-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inventory -->
+    <div id="page-inventory" class="page">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="card-title" style="margin:0">产品库存</div>
+          <button class="btn btn-primary" onclick="openProductModal()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            新增产品
+          </button>
+        </div>
+        <div style="margin-bottom:12px">
+          <input type="text" id="inventory-search" placeholder="搜索产品名称、货号..." style="width:280px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px" oninput="renderInventory()">
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>货号</th><th>产品名称</th><th>规格</th><th>采购价(¥)</th>
+                <th>库存量</th><th>单位</th><th>库存状态</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profit -->
+    <div id="page-profit" class="page">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">基本信息</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>选择产品（可选）</label>
+                <select id="calc-product" onchange="fillCalcFromProduct()">
+                  <option value="">— 手动输入 —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>产品名称</label>
+                <input type="text" id="calc-name" placeholder="产品描述">
+              </div>
+              <div class="form-group">
+                <label>采购价 (¥/件)</label>
+                <input type="number" id="calc-cost" placeholder="0.00" oninput="calculate()">
+              </div>
+              <div class="form-group">
+                <label>数量</label>
+                <input type="number" id="calc-qty" placeholder="1" value="1" oninput="calculate()">
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">汇率 & 报价</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>报价币种</label>
+                <select id="calc-currency" onchange="syncCalcRate();calculate()">
+                  <option value="USD">USD 美元</option>
+                  <option value="EUR">EUR 欧元</option>
+                  <option value="GBP">GBP 英镑</option>
+                  <option value="JPY">JPY 日元</option>
+                  <option value="AUD">AUD 澳元</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>汇率 (1外币 = ?人民币)</label>
+                <input type="number" id="calc-rate" placeholder="7.25" value="7.25" step="0.01" oninput="calculate()">
+              </div>
+              <div class="form-group">
+                <label>目标报价 (外币/件)</label>
+                <input type="number" id="calc-price" placeholder="0.00" oninput="calculate()">
+              </div>
+              <div class="form-group">
+                <label>贸易条款</label>
+                <select id="calc-incoterm" onchange="calculate()">
+                  <option>FOB</option><option>CIF</option><option>EXW</option><option>CFR</option><option>DDP</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">成本明细</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>运费/物流 (¥/件)</label>
+                <input type="number" id="calc-shipping" placeholder="0.00" value="0" oninput="calculate()">
+              </div>
+              <div class="form-group">
+                <label>出口退税率 (%)</label>
+                <input type="number" id="calc-tax-rebate" placeholder="13" value="13" min="0" max="17" oninput="calculate()">
+              </div>
+              <div class="form-group">
+                <label>增值税率 (%)</label>
+                <input type="number" id="calc-vat" placeholder="13" value="13" oninput="calculate()">
+              </div>
+              <div class="form-group">
+                <label>佣金/手续费 (%)</label>
+                <input type="number" id="calc-commission" placeholder="0" value="0" step="0.1" oninput="calculate()">
+              </div>
+              <div class="form-group">
+                <label>其他杂费 (¥/件)</label>
+                <input type="number" id="calc-misc" placeholder="0.00" value="0" oninput="calculate()">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div id="calc-result-box">
+            <div class="card" style="text-align:center;padding:40px;color:var(--text-secondary)">
+              <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:0.3;margin:0 auto 12px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              <p>填写左侧信息后<br>自动显示利润分析</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quote -->
+    <div id="page-quote" class="page">
+      <div class="tabs">
+        <div class="tab active" onclick="switchQuoteTab('edit')">编辑报价单</div>
+        <div class="tab" onclick="switchQuoteTab('list')">历史记录</div>
+      </div>
+
+      <div id="quote-tab-edit">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title">买家信息</div>
+              <div class="form-grid">
+                <div class="form-group" style="grid-column:1/-1">
+                  <label>客户公司名</label>
+                  <input type="text" id="q-buyer-name" placeholder="Company Name">
+                </div>
+                <div class="form-group" style="grid-column:1/-1">
+                  <label>客户地址</label>
+                  <input type="text" id="q-buyer-addr" placeholder="Address, City, Country">
+                </div>
+                <div class="form-group">
+                  <label>联系人</label>
+                  <input type="text" id="q-buyer-contact" placeholder="Contact Person">
+                </div>
+                <div class="form-group">
+                  <label>邮箱</label>
+                  <input type="text" id="q-buyer-email" placeholder="email@example.com">
+                </div>
+              </div>
+            </div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title">报价参数</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>报价单号</label>
+                  <input type="text" id="q-number" placeholder="QT-2024-001">
+                </div>
+                <div class="form-group">
+                  <label>报价日期</label>
+                  <input type="date" id="q-date">
+                </div>
+                <div class="form-group">
+                  <label>有效期至</label>
+                  <input type="date" id="q-valid">
+                </div>
+                <div class="form-group">
+                  <label>币种</label>
+                  <select id="q-currency">
+                    <option>USD</option><option>EUR</option><option>GBP</option><option>JPY</option><option>AUD</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>贸易条款</label>
+                  <select id="q-incoterm">
+                    <option>FOB</option><option>CIF</option><option>EXW</option><option>CFR</option><option>DDP</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>付款方式</label>
+                  <select id="q-payment">
+                    <option>T/T 30% deposit</option>
+                    <option>T/T in advance</option>
+                    <option>L/C at sight</option>
+                    <option>D/P</option>
+                    <option>Western Union</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div class="card-title" style="margin:0">报价产品</div>
+                <button class="btn btn-outline btn-sm" onclick="openProductPicker()">+ 从库存选择</button>
+              </div>
+              <div id="quote-items-list"></div>
+              <button class="btn btn-ghost btn-sm" style="margin-top:8px;width:100%" onclick="addQuoteItemRow()">+ 手动添加行</button>
+            </div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title">备注 & 条款</div>
+              <div class="form-grid">
+                <div class="form-group" style="grid-column:1/-1">
+                  <label>备注</label>
+                  <textarea id="q-remarks" placeholder="Remarks / Special Requirements..."></textarea>
+                </div>
+                <div class="form-group" style="grid-column:1/-1">
+                  <label>条款说明</label>
+                  <textarea id="q-terms" placeholder="Terms and conditions...">1. Prices are valid for 30 days.&#10;2. Lead time: 15-20 working days after deposit received.&#10;3. Packing: Standard export carton.</textarea>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+              <button class="btn btn-primary" style="flex:1" onclick="previewQuote()">预览报价单</button>
+              <button class="btn btn-success" style="flex:1" onclick="exportQuotePDF()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                导出 PDF
+              </button>
+              <button class="btn btn-ghost" onclick="saveQuote()">保存</button>
+            </div>
+            <div id="quote-preview-area"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="quote-tab-list" style="display:none">
+        <div class="card">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>报价单号</th><th>客户</th><th>日期</th><th>金额</th><th>币种</th><th>操作</th></tr>
+              </thead>
+              <tbody id="quotes-history-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div id="page-settings" class="page">
+      <div class="card" style="max-width:600px">
+        <div class="card-title">公司信息</div>
+        <div class="alert alert-info">此信息将自动填入报价单抬头</div>
+        <div class="form-grid">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>公司名称（中文）</label>
+            <input type="text" id="s-company-cn" placeholder="XX贸易有限公司">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>公司名称（英文）</label>
+            <input type="text" id="s-company-en" placeholder="XX Trading Co., Ltd.">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>地址</label>
+            <input type="text" id="s-addr" placeholder="No.1 XX Road, XX City, China">
+          </div>
+          <div class="form-group">
+            <label>电话</label>
+            <input type="text" id="s-tel" placeholder="+86-xxx-xxxxxxxx">
+          </div>
+          <div class="form-group">
+            <label>邮箱</label>
+            <input type="text" id="s-email" placeholder="sales@example.com">
+          </div>
+          <div class="form-group">
+            <label>网站</label>
+            <input type="text" id="s-web" placeholder="www.example.com">
+          </div>
+          <div class="form-group">
+            <label>银行名称</label>
+            <input type="text" id="s-bank" placeholder="Bank of China">
+          </div>
+          <div class="form-group">
+            <label>银行账号 / SWIFT</label>
+            <input type="text" id="s-swift" placeholder="BKCHCNBJ / XXXX XXXX XXXX">
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Product Modal -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="product-modal-title">新增产品</h3>
+      <button class="modal-close" onclick="closeModal('product-modal')">&times;</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>货号 / SKU</label>
+        <input type="text" id="p-sku" placeholder="SKU-001">
+      </div>
+      <div class="form-group">
+        <label>产品名称 *</label>
+        <input type="text" id="p-name" placeholder="产品名称">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>规格描述</label>
+        <input type="text" id="p-spec" placeholder="尺寸、颜色、材质等">
+      </div>
+      <div class="form-group">
+        <label>采购价 (¥) *</label>
+        <input type="number" id="p-cost" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>建议报价 (外币)</label>
+        <input type="number" id="p-price" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>库存数量 *</label>
+        <input type="number" id="p-stock" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>单位</label>
+        <select id="p-unit">
+          <option>PCS</option><option>SET</option><option>BOX</option><option>CTN</option>
+          <option>KG</option><option>M</option><option>M²</option><option>套</option><option>个</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>预警库存</label>
+        <input type="number" id="p-min-stock" placeholder="10">
+      </div>
+      <div class="form-group">
+        <label>净重 (kg/件)</label>
+        <input type="number" id="p-weight" placeholder="0.000" step="0.001">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('product-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveProduct()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Product Picker Modal -->
+<div class="modal-overlay" id="picker-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>从库存选择产品</h3>
+      <button class="modal-close" onclick="closeModal('picker-modal')">&times;</button>
+    </div>
+    <input type="text" id="picker-search" placeholder="搜索产品..." style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;margin-bottom:10px" oninput="renderPicker()">
+    <div class="product-picker" id="picker-list"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('picker-modal')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  LIVE EXCHANGE RATES
+// ═══════════════════════════════════════
+const RATE_CURRENCIES = ['USD','EUR','GBP','JPY','AUD','CAD','HKD','SGD'];
+const CURRENCY_NAMES = {
+  USD:'美元', EUR:'欧元', GBP:'英镑', JPY:'日元',
+  AUD:'澳元', CAD:'加元', HKD:'港元', SGD:'新加坡元'
+};
+const CHART_COLORS = {
+  USD:'#1a73e8', EUR:'#ea4335', GBP:'#34a853', JPY:'#f29900',
+  AUD:'#9c27b0', CAD:'#ff6d00', HKD:'#00897b', SGD:'#795548'
+};
+
+let liveRates   = {};   // { USD: 7.2541, ... }
+let prevRates   = {};   // yesterday's rates
+let rateHistory = {};   // { USD: [{date, rate}, × 7], ... }
+let rateUpdateTime = null;
+let rateChart   = null;
+let chartVisible = new Set(['USD','EUR','GBP','AUD']);
+
+/* ── helpers ── */
+function getLast7Dates() {
+  const dates = [];
+  const today = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+  return dates;
+}
+
+async function fetchDayRates(date) {
+  const urls = [
+    `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/cny.json`,
+    `https://raw.githubusercontent.com/fawazahmed0/exchange-api/main/v1/currencies/${date}/cny.json`
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return await res.json();
+    } catch {}
+  }
+  return null;
+}
+
+/* ── main fetch (7 days in parallel) ── */
+async function fetchRates() {
+  const dates = getLast7Dates();
+  const results = await Promise.all(dates.map(async date => {
+    const data = await fetchDayRates(date);
+    return { date, cny: data?.cny || null };
+  }));
+
+  // Build per-currency history
+  rateHistory = {};
+  for (const cur of RATE_CURRENCIES) {
+    rateHistory[cur] = results.map(r => {
+      const val = r.cny?.[cur.toLowerCase()];
+      return { date: r.date, rate: val ? +(1 / val).toFixed(4) : null };
+    });
+  }
+
+  // liveRates = most recent non-null
+  liveRates = {};
+  for (const cur of RATE_CURRENCIES) {
+    const latest = [...rateHistory[cur]].reverse().find(x => x.rate !== null);
+    if (latest) liveRates[cur] = latest.rate;
+  }
+
+  // prevRates = day before latest
+  prevRates = {};
+  for (const cur of RATE_CURRENCIES) {
+    const hist = rateHistory[cur];
+    const yest = [...hist].slice(0, -1).reverse().find(x => x.rate !== null);
+    if (yest) prevRates[cur] = yest.rate;
+  }
+
+  rateUpdateTime = new Date();
+  renderRateCards();
+  renderRateChart();
+  syncCalcRate();
+}
+
+/* ── 汇率卡片 ── */
+function renderRateCards() {
+  const grid = document.getElementById('rate-cards-grid');
+  if (!grid) return;
+
+  grid.innerHTML = RATE_CURRENCIES.map(cur => {
+    const rate = liveRates[cur];
+    const name = CURRENCY_NAMES[cur] || cur;
+    const dot  = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CHART_COLORS[cur]};margin-right:5px;vertical-align:middle"></span>`;
+
+    if (!rate) return `
+      <div class="rate-card" style="opacity:0.5">
+        <div class="rc-cur">${dot}${cur}</div>
+        <div class="rc-name">${name}</div>
+        <div class="rc-rate" style="font-size:15px;color:var(--text-secondary)">获取失败</div>
+      </div>`;
+
+    const prev = prevRates[cur];
+    let chgHtml = '<div class="rc-chg" style="color:var(--text-secondary)">— 与昨日持平</div>';
+    if (prev && prev !== rate) {
+      const diff = rate - prev;
+      const pct  = (diff / prev * 100).toFixed(2);
+      const cls  = diff > 0 ? 'rc-up' : 'rc-down';
+      const arr  = diff > 0 ? '▲' : '▼';
+      chgHtml = `<div class="rc-chg ${cls}">${arr} ${Math.abs(diff).toFixed(4)} &nbsp;(${Math.abs(pct)}%)</div>`;
+    }
+
+    return `
+      <div class="rate-card" onclick="applyRate('${cur}')" title="点击应用到利润测算">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">
+          <div class="rc-cur">${dot}${cur}</div>
+          <span style="font-size:10px;color:var(--text-secondary)">点击应用</span>
+        </div>
+        <div class="rc-name">${name}</div>
+        <div class="rc-rate">¥ ${rate.toFixed(4)}</div>
+        ${chgHtml}
+      </div>`;
+  }).join('');
+
+  const t = document.getElementById('rate-update-time');
+  if (t && rateUpdateTime)
+    t.textContent = '更新时间: ' + rateUpdateTime.toLocaleTimeString('zh-CN');
+}
+
+/* ── 7日折线图 ── */
+function renderRateChart() {
+  const canvas = document.getElementById('rate-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const dates = getLast7Dates();
+  const labels = dates.map(d => {
+    const [, m, day] = d.split('-');
+    return `${+m}月${+day}日`;
+  });
+
+  // Toggle buttons
+  const toggleDiv = document.getElementById('rate-chart-toggles');
+  if (toggleDiv) {
+    toggleDiv.innerHTML = RATE_CURRENCIES.map(cur => {
+      const on  = chartVisible.has(cur);
+      const col = CHART_COLORS[cur];
+      return `<button onclick="toggleChartCur('${cur}')"
+        style="padding:3px 10px;border-radius:12px;border:2px solid ${col};
+               background:${on ? col : 'transparent'};color:${on ? '#fff' : col};
+               font-size:11px;font-weight:600;cursor:pointer;transition:all .15s">
+        ${cur}&nbsp;${CURRENCY_NAMES[cur]||cur}
+      </button>`;
+    }).join('');
+  }
+
+  // Build datasets — % change from day-0 baseline
+  const datasets = RATE_CURRENCIES.filter(c => chartVisible.has(c)).map(cur => {
+    const hist  = rateHistory[cur] || [];
+    const base  = hist.find(x => x.rate !== null)?.rate;
+    const data  = hist.map(h =>
+      (h.rate != null && base) ? +((h.rate - base) / base * 100).toFixed(3) : null
+    );
+    return {
+      label: `${cur}（${CURRENCY_NAMES[cur]||cur}）`,
+      data,
+      borderColor: CHART_COLORS[cur],
+      backgroundColor: CHART_COLORS[cur] + '1a',
+      borderWidth: 2.5,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.35,
+      fill: false,
+      spanGaps: true,
+    };
+  });
+
+  if (rateChart) rateChart.destroy();
+  rateChart = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { font: { size: 12, family: "'Microsoft YaHei', sans-serif" }, padding: 14, usePointStyle: true }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed.y;
+              if (v == null) return ` ${ctx.dataset.label}: —`;
+              return ` ${ctx.dataset.label}: ${v > 0 ? '+' : ''}${v.toFixed(3)}%`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 11 } } },
+        y: {
+          grid: { color: '#f0f0f0' },
+          ticks: {
+            font: { size: 11 },
+            callback: v => (v > 0 ? '+' : '') + v.toFixed(2) + '%'
+          },
+          title: { display: true, text: '较7日前涨跌幅 (%)', font: { size: 11 }, color: '#5f6368' }
+        }
+      }
+    }
+  });
+}
+
+function toggleChartCur(cur) {
+  if (chartVisible.has(cur)) chartVisible.delete(cur);
+  else chartVisible.add(cur);
+  renderRateChart();
+}
+
+function applyRate(currency) {
+  const rate = liveRates[currency];
+  if (!rate) return;
+  const el  = document.getElementById('calc-rate');
+  const sel = document.getElementById('calc-currency');
+  if (el)  { el.value = rate.toFixed(4); el.style.background='#e6f4ea'; setTimeout(()=>el.style.background='',800); }
+  if (sel) sel.value = currency;
+  calculate();
+  showPage('profit');
+}
+
+function syncCalcRate() {
+  const cur = document.getElementById('calc-currency')?.value;
+  if (cur && liveRates[cur]) {
+    const el = document.getElementById('calc-rate');
+    if (el && !el._manualEdit) el.value = liveRates[cur].toFixed(4);
+  }
+}
+
+// Initial fetch + refresh every 5 minutes
+fetchRates();
+setInterval(fetchRates, 5 * 60 * 1000);
+
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let state = {
+  products: [],
+  quotes: [],
+  quoteItems: [],
+  settings: {},
+  editingProductId: null
+};
+
+function load() {
+  try {
+    const s = localStorage.getItem('fts_state');
+    if (s) Object.assign(state, JSON.parse(s));
+  } catch(e) {}
+  // Default settings
+  if (!state.settings) state.settings = {};
+  if (!state.products) state.products = [];
+  if (!state.quotes) state.quotes = [];
+  if (!state.quoteItems) state.quoteItems = [];
+}
+
+function save() {
+  localStorage.setItem('fts_state', JSON.stringify(state));
+}
+
+// ═══════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════
+const pageTitles = { dashboard:'总览', inventory:'库存管理', profit:'利润测算', quote:'报价单', settings:'公司设置' };
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item')[['dashboard','inventory','profit','quote','settings'].indexOf(name)].classList.add('active');
+  document.getElementById('page-title').textContent = pageTitles[name];
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'inventory') renderInventory();
+  if (name === 'profit') renderCalcProducts();
+  if (name === 'quote') { renderQuoteItems(); renderQuoteHistory(); initQuoteDefaults(); }
+  if (name === 'settings') loadSettings();
+}
+
+// ═══════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════
+function renderDashboard() {
+  // Re-render rate section if data already loaded
+  if (Object.keys(liveRates).length > 0) {
+    renderRateCards();
+    renderRateChart();
+  }
+
+  const total = state.products.reduce((s,p) => s + p.stock, 0);
+  const totalVal = state.products.reduce((s,p) => s + p.stock * p.cost, 0);
+  const lowStock = state.products.filter(p => p.stock <= (p.minStock || 10) && p.stock > 0);
+  const noStock = state.products.filter(p => p.stock === 0);
+
+  document.getElementById('dashboard-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-label">产品种类</div><div class="stat-value text-primary">${state.products.length}</div><div class="stat-sub">种产品</div></div>
+    <div class="stat-card"><div class="stat-label">总库存量</div><div class="stat-value">${total.toLocaleString()}</div><div class="stat-sub">件</div></div>
+    <div class="stat-card"><div class="stat-label">库存总价值</div><div class="stat-value text-success">¥${totalVal.toLocaleString('zh',{minimumFractionDigits:0,maximumFractionDigits:0})}</div><div class="stat-sub">按采购价计算</div></div>
+    <div class="stat-card"><div class="stat-label">报价单数</div><div class="stat-value text-primary">${state.quotes.length}</div><div class="stat-sub">历史报价</div></div>
+    <div class="stat-card"><div class="stat-label">库存预警</div><div class="stat-value text-warning">${lowStock.length}</div><div class="stat-sub">款低库存</div></div>
+    <div class="stat-card"><div class="stat-label">缺货</div><div class="stat-value text-danger">${noStock.length}</div><div class="stat-sub">款零库存</div></div>
+  `;
+
+  const ll = document.getElementById('low-stock-list');
+  if (lowStock.length === 0) {
+    ll.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-secondary);font-size:13px">库存充足，暂无预警</div>';
+  } else {
+    ll.innerHTML = lowStock.slice(0,6).map(p => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <div><div style="font-weight:500">${p.name}</div><div style="font-size:11px;color:var(--text-secondary)">${p.sku||''}</div></div>
+        <div><span class="badge ${p.stock===0?'badge-danger':'badge-warning'}">${p.stock} ${p.unit}</span></div>
+      </div>
+    `).join('');
+  }
+
+  const rl = document.getElementById('recent-quotes-list');
+  const recentQ = [...state.quotes].reverse().slice(0,5);
+  if (recentQ.length === 0) {
+    rl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-secondary);font-size:13px">暂无报价记录</div>';
+  } else {
+    rl.innerHTML = recentQ.map(q => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <div><div style="font-weight:500">${q.number}</div><div style="font-size:11px;color:var(--text-secondary)">${q.buyer}</div></div>
+        <div style="text-align:right"><div>${q.currency} ${q.total.toFixed(2)}</div><div style="font-size:11px;color:var(--text-secondary)">${q.date}</div></div>
+      </div>
+    `).join('');
+  }
+}
+
+// ═══════════════════════════════════════
+//  INVENTORY
+// ═══════════════════════════════════════
+function renderInventory() {
+  const q = (document.getElementById('inventory-search')||{value:''}).value.toLowerCase();
+  const list = state.products.filter(p =>
+    !q || p.name.toLowerCase().includes(q) || (p.sku||'').toLowerCase().includes(q)
+  );
+  const tbody = document.getElementById('inventory-tbody');
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8"/></svg><p>${q?'未找到匹配产品':'点击"新增产品"开始管理库存'}</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(p => {
+    const min = p.minStock || 10;
+    let badge, status;
+    if (p.stock === 0) { badge = 'badge-danger'; status = '缺货'; }
+    else if (p.stock <= min) { badge = 'badge-warning'; status = '低库存'; }
+    else { badge = 'badge-success'; status = '正常'; }
+    return `<tr>
+      <td><span style="font-family:monospace;font-size:12px">${p.sku||'—'}</span></td>
+      <td><strong>${p.name}</strong>${p.spec?`<br><span style="font-size:11px;color:var(--text-secondary)">${p.spec}</span>`:''}</td>
+      <td>${p.spec||'—'}</td>
+      <td>¥${(+p.cost).toFixed(2)}</td>
+      <td style="font-weight:600">${p.stock}</td>
+      <td>${p.unit}</td>
+      <td><span class="badge ${badge}">${status}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="openProductModal('${p.id}')">编辑</button>
+        <button class="btn btn-sm" style="background:#fce8e6;color:var(--danger);margin-left:4px" onclick="deleteProduct('${p.id}')">删除</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openProductModal(id) {
+  state.editingProductId = id || null;
+  const modal = document.getElementById('product-modal');
+  if (id) {
+    const p = state.products.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('product-modal-title').textContent = '编辑产品';
+    document.getElementById('p-sku').value = p.sku || '';
+    document.getElementById('p-name').value = p.name;
+    document.getElementById('p-spec').value = p.spec || '';
+    document.getElementById('p-cost').value = p.cost;
+    document.getElementById('p-price').value = p.price || '';
+    document.getElementById('p-stock').value = p.stock;
+    document.getElementById('p-unit').value = p.unit;
+    document.getElementById('p-min-stock').value = p.minStock || '';
+    document.getElementById('p-weight').value = p.weight || '';
+  } else {
+    document.getElementById('product-modal-title').textContent = '新增产品';
+    ['p-sku','p-name','p-spec','p-cost','p-price','p-stock','p-min-stock','p-weight'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('p-unit').value = 'PCS';
+    document.getElementById('p-stock').value = 0;
+  }
+  modal.classList.add('show');
+}
+
+function saveProduct() {
+  const name = document.getElementById('p-name').value.trim();
+  const cost = parseFloat(document.getElementById('p-cost').value);
+  const stock = parseInt(document.getElementById('p-stock').value);
+  if (!name) return alert('请输入产品名称');
+  if (isNaN(cost)) return alert('请输入采购价');
+
+  const data = {
+    sku: document.getElementById('p-sku').value.trim(),
+    name,
+    spec: document.getElementById('p-spec').value.trim(),
+    cost,
+    price: parseFloat(document.getElementById('p-price').value) || 0,
+    stock: isNaN(stock) ? 0 : stock,
+    unit: document.getElementById('p-unit').value,
+    minStock: parseInt(document.getElementById('p-min-stock').value) || 10,
+    weight: parseFloat(document.getElementById('p-weight').value) || 0,
+  };
+
+  if (state.editingProductId) {
+    const idx = state.products.findIndex(p => p.id === state.editingProductId);
+    if (idx >= 0) state.products[idx] = { ...state.products[idx], ...data };
+  } else {
+    data.id = 'p_' + Date.now();
+    state.products.push(data);
+  }
+  save();
+  closeModal('product-modal');
+  renderInventory();
+}
+
+function deleteProduct(id) {
+  if (!confirm('确认删除此产品？')) return;
+  state.products = state.products.filter(p => p.id !== id);
+  save();
+  renderInventory();
+}
+
+// ═══════════════════════════════════════
+//  PROFIT CALCULATOR
+// ═══════════════════════════════════════
+function renderCalcProducts() {
+  const sel = document.getElementById('calc-product');
+  sel.innerHTML = '<option value="">— 手动输入 —</option>' +
+    state.products.map(p => `<option value="${p.id}">${p.name}${p.sku?' ('+p.sku+')':''}</option>`).join('');
+}
+
+function fillCalcFromProduct() {
+  const id = document.getElementById('calc-product').value;
+  if (!id) return;
+  const p = state.products.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('calc-name').value = p.name;
+  document.getElementById('calc-cost').value = p.cost;
+  if (p.price) document.getElementById('calc-price').value = p.price;
+  calculate();
+}
+
+function calculate() {
+  const cost = parseFloat(document.getElementById('calc-cost').value) || 0;
+  const qty = parseFloat(document.getElementById('calc-qty').value) || 1;
+  const rate = parseFloat(document.getElementById('calc-rate').value) || 7.25;
+  const priceFC = parseFloat(document.getElementById('calc-price').value) || 0;
+  const shipping = parseFloat(document.getElementById('calc-shipping').value) || 0;
+  const taxRebate = parseFloat(document.getElementById('calc-tax-rebate').value) || 0;
+  const vat = parseFloat(document.getElementById('calc-vat').value) || 13;
+  const commission = parseFloat(document.getElementById('calc-commission').value) || 0;
+  const misc = parseFloat(document.getElementById('calc-misc').value) || 0;
+  const currency = document.getElementById('calc-currency').value;
+  const incoterm = document.getElementById('calc-incoterm').value;
+
+  if (!cost || !priceFC) {
+    document.getElementById('calc-result-box').innerHTML = `
+      <div class="card" style="text-align:center;padding:40px;color:var(--text-secondary)">
+        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:0.3;margin:0 auto 12px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <p>填写采购价和目标报价后<br>自动显示利润分析</p>
+      </div>`;
+    return;
+  }
+
+  // Revenue in CNY per piece
+  const revenueCNY = priceFC * rate;
+  // Tax rebate income
+  const rebateIncome = cost * (taxRebate / 100);
+  // Commission cost
+  const commissionCost = revenueCNY * (commission / 100);
+  // Total cost per piece
+  const totalCost = cost + shipping + misc + commissionCost - rebateIncome;
+  // Profit per piece
+  const profitPerPiece = revenueCNY - totalCost;
+  // Profit margin
+  const margin = revenueCNY > 0 ? (profitPerPiece / revenueCNY * 100) : 0;
+  // Total for qty
+  const totalRevenue = revenueCNY * qty;
+  const totalProfit = profitPerPiece * qty;
+
+  // Suggest price for 20% margin
+  const suggestPrice20 = (totalCost / (1 - 0.20)) / rate;
+  const suggestPrice30 = (totalCost / (1 - 0.30)) / rate;
+
+  const profitColor = margin >= 20 ? '#34a853' : margin >= 10 ? '#fbbc04' : '#ea4335';
+  const marginIcon = margin >= 20 ? '↑' : margin >= 10 ? '→' : '↓';
+
+  document.getElementById('calc-result-box').innerHTML = `
+    <div class="calc-result">
+      <div style="font-size:13px;opacity:0.85;margin-bottom:4px">利润分析 · ${qty} 件 · ${incoterm} · ${currency}</div>
+      <div style="font-size:36px;font-weight:800;color:${profitColor === '#34a853' ? '#b9f6ca' : profitColor === '#fbbc04' ? '#fff9c4' : '#ffcdd2'}">${margin.toFixed(1)}%</div>
+      <div style="font-size:13px;opacity:0.8;margin-bottom:16px">利润率 ${marginIcon}</div>
+      <div class="calc-result-grid">
+        <div class="calc-result-item"><div class="label">单件报价收入 (¥)</div><div class="value">¥${revenueCNY.toFixed(2)}</div></div>
+        <div class="calc-result-item"><div class="label">单件净利润 (¥)</div><div class="value">¥${profitPerPiece.toFixed(2)}</div></div>
+        <div class="calc-result-item"><div class="label">总收入 (¥)</div><div class="value">¥${totalRevenue.toFixed(0)}</div></div>
+        <div class="calc-result-item"><div class="label">总利润 (¥)</div><div class="value">¥${totalProfit.toFixed(0)}</div></div>
+      </div>
+    </div>
+    <div class="calc-breakdown">
+      <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">成本明细 (单件)</div>
+      <div class="calc-breakdown-row"><span>采购成本</span><span>¥${cost.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span>运费/物流</span><span>¥${shipping.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span>佣金 (${commission}%)</span><span>¥${commissionCost.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span>其他杂费</span><span>¥${misc.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row" style="color:var(--success)"><span>出口退税收入 (${taxRebate}%)</span><span>-¥${rebateIncome.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span>总成本</span><span>¥${totalCost.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span style="color:var(--primary)">报价收入</span><span style="color:var(--primary)">¥${revenueCNY.toFixed(2)}</span></div>
+    </div>
+    <div class="calc-breakdown" style="margin-top:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">参考报价</div>
+      <div class="calc-breakdown-row"><span>20% 利润率报价</span><span style="color:var(--success);font-weight:600">${currency} ${suggestPrice20.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span>30% 利润率报价</span><span style="color:var(--success);font-weight:600">${currency} ${suggestPrice30.toFixed(2)}</span></div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════
+//  QUOTE
+// ═══════════════════════════════════════
+function initQuoteDefaults() {
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0];
+  const validDate = new Date(today);
+  validDate.setDate(validDate.getDate() + 30);
+  const validStr = validDate.toISOString().split('T')[0];
+
+  if (!document.getElementById('q-date').value) {
+    document.getElementById('q-date').value = dateStr;
+    document.getElementById('q-valid').value = validStr;
+    document.getElementById('q-number').value = 'QT-' + dateStr.replace(/-/g,'').slice(2) + '-' + String(state.quotes.length+1).padStart(3,'0');
+  }
+  if (state.quoteItems.length === 0) addQuoteItemRow();
+}
+
+function addQuoteItemRow(product) {
+  const id = 'qi_' + Date.now() + Math.random();
+  state.quoteItems.push({
+    id,
+    productId: product ? product.id : null,
+    name: product ? product.name : '',
+    spec: product ? (product.spec||'') : '',
+    qty: 1,
+    unit: product ? product.unit : 'PCS',
+    price: product ? (product.price||0) : 0
+  });
+  renderQuoteItems();
+}
+
+function renderQuoteItems() {
+  const el = document.getElementById('quote-items-list');
+  if (state.quoteItems.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);font-size:13px">暂无产品，点击下方添加</div>';
+    return;
+  }
+  el.innerHTML = state.quoteItems.map((item, i) => `
+    <div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:12px;color:var(--text-secondary);font-weight:600">产品 ${i+1}</span>
+        <button class="btn btn-sm" style="background:#fce8e6;color:var(--danger);padding:2px 8px" onclick="removeQuoteItem('${item.id}')">✕</button>
+      </div>
+      <div class="form-grid" style="grid-template-columns:2fr 1fr 1fr 1fr">
+        <div class="form-group">
+          <label>产品名称</label>
+          <input type="text" value="${escHtml(item.name)}" onchange="updateQuoteItem('${item.id}','name',this.value)" placeholder="Product Name">
+        </div>
+        <div class="form-group">
+          <label>数量</label>
+          <input type="number" value="${item.qty}" onchange="updateQuoteItem('${item.id}','qty',+this.value)" min="1">
+        </div>
+        <div class="form-group">
+          <label>单位</label>
+          <input type="text" value="${escHtml(item.unit)}" onchange="updateQuoteItem('${item.id}','unit',this.value)">
+        </div>
+        <div class="form-group">
+          <label>单价 (外币)</label>
+          <input type="number" value="${item.price}" onchange="updateQuoteItem('${item.id}','price',+this.value)" step="0.01" min="0">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:6px">
+        <label>规格描述</label>
+        <input type="text" value="${escHtml(item.spec||'')}" onchange="updateQuoteItem('${item.id}','spec',this.value)" placeholder="Specifications...">
+      </div>
+      <div style="text-align:right;font-size:13px;margin-top:6px;color:var(--text-secondary)">
+        小计: <strong style="color:var(--text)">${getCurrency()} ${(item.qty * item.price).toFixed(2)}</strong>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateQuoteItem(id, key, val) {
+  const item = state.quoteItems.find(i => i.id === id);
+  if (item) item[key] = val;
+}
+
+function removeQuoteItem(id) {
+  state.quoteItems = state.quoteItems.filter(i => i.id !== id);
+  renderQuoteItems();
+}
+
+function getCurrency() { return document.getElementById('q-currency').value || 'USD'; }
+
+function openProductPicker() {
+  renderPicker();
+  document.getElementById('picker-modal').classList.add('show');
+}
+
+function renderPicker() {
+  const q = (document.getElementById('picker-search')||{value:''}).value.toLowerCase();
+  const list = state.products.filter(p => !q || p.name.toLowerCase().includes(q) || (p.sku||'').toLowerCase().includes(q));
+  const el = document.getElementById('picker-list');
+  if (list.length === 0) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-secondary);font-size:13px">暂无产品</div>';
+    return;
+  }
+  el.innerHTML = list.map(p => `
+    <div class="product-picker-item" onclick="pickProduct('${p.id}')">
+      <div>
+        <div style="font-weight:500">${escHtml(p.name)}</div>
+        <div style="font-size:11px;color:var(--text-secondary)">${p.sku||''} · 库存: ${p.stock} ${p.unit} · ¥${p.cost}</div>
+      </div>
+      <svg width="16" height="16" fill="none" stroke="var(--primary)" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+  `).join('');
+}
+
+function pickProduct(id) {
+  const p = state.products.find(x => x.id === id);
+  if (p) addQuoteItemRow(p);
+  closeModal('picker-modal');
+}
+
+function getQuoteTotal() {
+  return state.quoteItems.reduce((s,i) => s + (i.qty||0) * (i.price||0), 0);
+}
+
+function buildQuoteData() {
+  const s = state.settings;
+  return {
+    number: document.getElementById('q-number').value || 'QT-001',
+    date: document.getElementById('q-date').value,
+    valid: document.getElementById('q-valid').value,
+    currency: getCurrency(),
+    incoterm: document.getElementById('q-incoterm').value,
+    payment: document.getElementById('q-payment').value,
+    buyer: {
+      name: document.getElementById('q-buyer-name').value,
+      addr: document.getElementById('q-buyer-addr').value,
+      contact: document.getElementById('q-buyer-contact').value,
+      email: document.getElementById('q-buyer-email').value,
+    },
+    seller: {
+      nameEn: s.companyEn || 'Your Company Name',
+      nameCn: s.companyCn || '',
+      addr: s.addr || '',
+      tel: s.tel || '',
+      email: s.email || '',
+      web: s.web || '',
+      bank: s.bank || '',
+      swift: s.swift || '',
+    },
+    items: state.quoteItems.map(i => ({...i})),
+    remarks: document.getElementById('q-remarks').value,
+    terms: document.getElementById('q-terms').value,
+    total: getQuoteTotal(),
+  };
+}
+
+function previewQuote() {
+  const q = buildQuoteData();
+  const html = buildQuoteHTML(q, true);
+  document.getElementById('quote-preview-area').innerHTML = html;
+}
+
+function buildQuoteHTML(q, inline) {
+  const rows = q.items.map(item => `
+    <tr>
+      <td>${escHtml(item.name)}</td>
+      <td>${escHtml(item.spec||'')}</td>
+      <td style="text-align:center">${item.qty}</td>
+      <td style="text-align:center">${escHtml(item.unit)}</td>
+      <td style="text-align:right">${q.currency} ${(+item.price).toFixed(2)}</td>
+      <td style="text-align:right">${q.currency} ${((+item.qty)*(+item.price)).toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <div class="quote-preview">
+      <div class="quote-header">
+        <div>
+          <div class="quote-company">${escHtml(q.seller.nameEn)}</div>
+          ${q.seller.nameCn?`<div style="font-size:12px;color:var(--text-secondary)">${escHtml(q.seller.nameCn)}</div>`:''}
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${escHtml(q.seller.addr)}</div>
+          <div style="font-size:12px;color:var(--text-secondary)">${escHtml(q.seller.tel)} | ${escHtml(q.seller.email)}</div>
+        </div>
+        <div class="quote-meta">
+          <strong>QUOTATION</strong>
+          <div>No.: ${escHtml(q.number)}</div>
+          <div>Date: ${q.date}</div>
+          <div>Valid Until: ${q.valid}</div>
+        </div>
+      </div>
+      <div class="quote-parties">
+        <div>
+          <div class="quote-party-title">TO (买方):</div>
+          <div>${escHtml(q.buyer.name)}</div>
+          <div>${escHtml(q.buyer.addr)}</div>
+          <div>${escHtml(q.buyer.contact)}</div>
+          <div>${escHtml(q.buyer.email)}</div>
+        </div>
+        <div>
+          <div class="quote-party-title">Terms (条款):</div>
+          <div>Incoterm: <strong>${q.incoterm}</strong></div>
+          <div>Payment: <strong>${q.payment}</strong></div>
+          <div>Currency: <strong>${q.currency}</strong></div>
+        </div>
+      </div>
+      <div class="quote-table">
+        <table>
+          <thead><tr><th>Description</th><th>Specification</th><th style="text-align:center">Qty</th><th style="text-align:center">Unit</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Amount</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="quote-totals">
+        <div class="total-row total-final"><span>TOTAL</span><span>${q.currency} ${q.total.toFixed(2)}</span></div>
+      </div>
+      ${q.remarks?`<div class="quote-terms"><strong>Remarks:</strong> ${escHtml(q.remarks)}</div>`:''}
+      <div class="quote-terms">
+        <strong>Terms & Conditions:</strong>
+        <div>${escHtml(q.terms).replace(/\n/g,'<br>')}</div>
+      </div>
+      ${q.seller.bank?`<div class="quote-terms"><strong>Banking Details:</strong><br>${escHtml(q.seller.bank)}<br>${escHtml(q.seller.swift)}</div>`:''}
+    </div>
+  `;
+}
+
+function saveQuote() {
+  const q = buildQuoteData();
+  const existing = state.quotes.findIndex(x => x.number === q.number);
+  const record = { number:q.number, buyer:q.buyer.name, date:q.date, total:q.total, currency:q.currency, data:q };
+  if (existing >= 0) state.quotes[existing] = record;
+  else state.quotes.push(record);
+  save();
+  alert('报价单已保存');
+  renderQuoteHistory();
+}
+
+function renderQuoteHistory() {
+  const tbody = document.getElementById('quotes-history-tbody');
+  if (state.quotes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty"><p>暂无保存的报价单</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = [...state.quotes].reverse().map(q => `
+    <tr>
+      <td><strong>${escHtml(q.number)}</strong></td>
+      <td>${escHtml(q.buyer||'')}</td>
+      <td>${q.date}</td>
+      <td>${q.total.toFixed(2)}</td>
+      <td>${q.currency}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="loadQuote('${q.number}')">加载</button>
+        <button class="btn btn-sm" style="background:#fce8e6;color:var(--danger);margin-left:4px" onclick="deleteQuote('${q.number}')">删除</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function loadQuote(number) {
+  const record = state.quotes.find(q => q.number === number);
+  if (!record) return;
+  const q = record.data;
+  document.getElementById('q-number').value = q.number;
+  document.getElementById('q-date').value = q.date;
+  document.getElementById('q-valid').value = q.valid;
+  document.getElementById('q-currency').value = q.currency;
+  document.getElementById('q-incoterm').value = q.incoterm;
+  document.getElementById('q-payment').value = q.payment;
+  document.getElementById('q-buyer-name').value = q.buyer.name;
+  document.getElementById('q-buyer-addr').value = q.buyer.addr;
+  document.getElementById('q-buyer-contact').value = q.buyer.contact;
+  document.getElementById('q-buyer-email').value = q.buyer.email;
+  document.getElementById('q-remarks').value = q.remarks;
+  document.getElementById('q-terms').value = q.terms;
+  state.quoteItems = q.items.map(i => ({...i, id:'qi_'+Date.now()+Math.random()}));
+  renderQuoteItems();
+  switchQuoteTab('edit');
+}
+
+function deleteQuote(number) {
+  if (!confirm('确认删除此报价单？')) return;
+  state.quotes = state.quotes.filter(q => q.number !== number);
+  save();
+  renderQuoteHistory();
+}
+
+function switchQuoteTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (tab==='edit'&&i===0)||(tab==='list'&&i===1)));
+  document.getElementById('quote-tab-edit').style.display = tab==='edit'?'':'none';
+  document.getElementById('quote-tab-list').style.display = tab==='list'?'':'none';
+  if (tab==='list') renderQuoteHistory();
+}
+
+// ═══════════════════════════════════════
+//  PDF EXPORT
+// ═══════════════════════════════════════
+function exportQuotePDF() {
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) { alert('PDF库加载失败，请检查网络连接'); return; }
+  const q = buildQuoteData();
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+
+  const pageW = 210, margin = 16;
+  let y = margin;
+
+  // Header
+  doc.setFillColor(26, 115, 232);
+  doc.rect(0, 0, pageW, 28, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16); doc.setFont(undefined,'bold');
+  doc.text(q.seller.nameEn, margin, 13);
+  doc.setFontSize(8); doc.setFont(undefined,'normal');
+  if (q.seller.addr) doc.text(q.seller.addr, margin, 19);
+  const contact = [q.seller.tel, q.seller.email, q.seller.web].filter(Boolean).join('  |  ');
+  if (contact) doc.text(contact, margin, 24);
+
+  // Quote number top right
+  doc.setFontSize(10); doc.setFont(undefined,'bold');
+  doc.text('QUOTATION', pageW - margin, 12, {align:'right'});
+  doc.setFontSize(8); doc.setFont(undefined,'normal');
+  doc.text(`No.: ${q.number}`, pageW - margin, 18, {align:'right'});
+  doc.text(`Date: ${q.date}`, pageW - margin, 23, {align:'right'});
+
+  y = 36;
+  doc.setTextColor(0,0,0);
+
+  // Buyer & Terms boxes
+  doc.setFillColor(248,249,250);
+  doc.rect(margin, y, (pageW-margin*2)/2-4, 30, 'F');
+  doc.rect((pageW+margin*2)/2-4+4, y, (pageW-margin*2)/2-4, 30, 'F');
+  doc.setFontSize(8); doc.setFont(undefined,'bold');
+  doc.text('TO:', margin+3, y+6);
+  doc.setFont(undefined,'normal');
+  doc.text(q.buyer.name || '—', margin+3, y+11);
+  doc.text(q.buyer.addr || '', margin+3, y+16, {maxWidth: (pageW-margin*2)/2-8});
+  doc.text([q.buyer.contact, q.buyer.email].filter(Boolean).join('  '), margin+3, y+24, {maxWidth:(pageW-margin*2)/2-8});
+
+  const rx = (pageW+margin*2)/2;
+  doc.setFont(undefined,'bold'); doc.text('Terms:', rx+3, y+6);
+  doc.setFont(undefined,'normal');
+  doc.text(`Incoterm: ${q.incoterm}`, rx+3, y+11);
+  doc.text(`Payment: ${q.payment}`, rx+3, y+16);
+  doc.text(`Currency: ${q.currency}`, rx+3, y+21);
+  doc.text(`Valid Until: ${q.valid}`, rx+3, y+26);
+
+  y += 36;
+
+  // Items table
+  const tableBody = q.items.map(item => [
+    item.name,
+    item.spec || '',
+    item.qty,
+    item.unit,
+    `${q.currency} ${(+item.price).toFixed(2)}`,
+    `${q.currency} ${((+item.qty)*(+item.price)).toFixed(2)}`
+  ]);
+
+  doc.autoTable({
+    startY: y,
+    margin: { left: margin, right: margin },
+    head: [['Description', 'Specification', 'Qty', 'Unit', 'Unit Price', 'Amount']],
+    body: tableBody,
+    foot: [[{ content: 'TOTAL', colSpan: 5, styles: { halign:'right', fontStyle:'bold' } }, `${q.currency} ${q.total.toFixed(2)}`]],
+    styles: { fontSize: 8, cellPadding: 3 },
+    headStyles: { fillColor: [26,115,232], textColor:[255,255,255], fontStyle:'bold' },
+    footStyles: { fillColor:[232,240,254], textColor:[26,115,232], fontStyle:'bold' },
+    columnStyles: { 2:{halign:'center'}, 3:{halign:'center'}, 4:{halign:'right'}, 5:{halign:'right'} },
+  });
+
+  y = doc.lastAutoTable.finalY + 8;
+
+  // Remarks & Terms
+  doc.setFontSize(8);
+  if (q.remarks) {
+    doc.setFont(undefined,'bold'); doc.text('Remarks:', margin, y); y += 5;
+    doc.setFont(undefined,'normal'); doc.text(q.remarks, margin, y, {maxWidth: pageW-margin*2}); y += 10;
+  }
+  if (q.terms) {
+    doc.setFont(undefined,'bold'); doc.text('Terms & Conditions:', margin, y); y += 5;
+    doc.setFont(undefined,'normal');
+    const lines = q.terms.split('\n');
+    lines.forEach(line => { doc.text(line, margin, y, {maxWidth: pageW-margin*2}); y += 5; });
+    y += 2;
+  }
+  if (q.seller.bank) {
+    doc.setFont(undefined,'bold'); doc.text('Banking Details:', margin, y); y += 5;
+    doc.setFont(undefined,'normal');
+    doc.text(`${q.seller.bank}  |  ${q.seller.swift}`, margin, y);
+  }
+
+  // Footer
+  const pageH = 297;
+  doc.setFillColor(26,115,232);
+  doc.rect(0, pageH-10, pageW, 10, 'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(7);
+  doc.text(`Generated by 外贸Pro  ·  ${q.seller.email}  ·  ${q.seller.web}`, pageW/2, pageH-4, {align:'center'});
+
+  doc.save(`Quotation_${q.number}_${q.buyer.name||'Client'}.pdf`);
+}
+
+// ═══════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════
+function loadSettings() {
+  const s = state.settings;
+  document.getElementById('s-company-cn').value = s.companyCn || '';
+  document.getElementById('s-company-en').value = s.companyEn || '';
+  document.getElementById('s-addr').value = s.addr || '';
+  document.getElementById('s-tel').value = s.tel || '';
+  document.getElementById('s-email').value = s.email || '';
+  document.getElementById('s-web').value = s.web || '';
+  document.getElementById('s-bank').value = s.bank || '';
+  document.getElementById('s-swift').value = s.swift || '';
+}
+
+function saveSettings() {
+  state.settings = {
+    companyCn: document.getElementById('s-company-cn').value,
+    companyEn: document.getElementById('s-company-en').value,
+    addr: document.getElementById('s-addr').value,
+    tel: document.getElementById('s-tel').value,
+    email: document.getElementById('s-email').value,
+    web: document.getElementById('s-web').value,
+    bank: document.getElementById('s-bank').value,
+    swift: document.getElementById('s-swift').value,
+  };
+  save();
+  alert('设置已保存');
+}
+
+// ═══════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+load();
+renderDashboard();
+</script>
+</body>
+</html>
