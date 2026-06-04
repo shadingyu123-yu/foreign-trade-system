@@ -208,6 +208,52 @@
   .alert { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; }
   .alert-info { background: #e8f0fe; color: var(--primary); border: 1px solid #c5d8fb; }
 
+  /* Auth overlay */
+  #auth-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(135deg, #0d1b2e 0%, #1a3a5c 50%, #0d2a4a 100%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .auth-card {
+    background: #fff; border-radius: 16px; padding: 40px 36px; width: 380px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+  }
+  .auth-logo {
+    font-size: 28px; font-weight: 800; color: #1e2a3a; text-align: center;
+    margin-bottom: 6px; letter-spacing: 1px;
+  }
+  .auth-logo span { color: var(--primary); }
+  .auth-subtitle { text-align: center; font-size: 13px; color: var(--text-secondary); margin-bottom: 28px; }
+  .auth-tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 24px; }
+  .auth-tab {
+    flex: 1; text-align: center; padding: 10px; cursor: pointer;
+    font-size: 14px; font-weight: 600; color: var(--text-secondary);
+    border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all .15s;
+  }
+  .auth-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .auth-error {
+    background: #fce8e6; color: var(--danger); border-radius: 6px;
+    padding: 8px 12px; font-size: 12px; margin-bottom: 12px; display: none;
+  }
+  .auth-success {
+    background: #e6f4ea; color: var(--success); border-radius: 6px;
+    padding: 8px 12px; font-size: 12px; margin-bottom: 12px; display: none;
+  }
+  .auth-hint { font-size: 11px; color: var(--text-secondary); text-align: center; margin-top: 16px; line-height: 1.6; }
+  /* Sidebar user block */
+  .sidebar-user {
+    padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1);
+  }
+  .sidebar-user-label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .sidebar-user-name { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sidebar-logout {
+    width: 100%; padding: 6px 0; background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
+    color: rgba(255,255,255,0.75); cursor: pointer; font-size: 12px;
+    transition: background .15s;
+  }
+  .sidebar-logout:hover { background: rgba(234,67,53,0.4); color: #fff; }
+
   /* Responsive */
   @media (max-width: 768px) {
     :root { --sidebar-width: 56px; }
@@ -219,6 +265,56 @@
 </style>
 </head>
 <body>
+
+<!-- Auth Overlay -->
+<div id="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">外贸<span>Pro</span></div>
+    <div class="auth-subtitle">专业外贸管理系统 · 登录以继续</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">登 录</div>
+      <div class="auth-tab" onclick="switchAuthTab('register')">注 册</div>
+    </div>
+
+    <!-- 登录表单 -->
+    <div id="auth-login-form">
+      <div id="login-error" class="auth-error"></div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>用户名</label>
+        <input type="text" id="login-user" placeholder="请输入用户名" autocomplete="username"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      </div>
+      <div class="form-group" style="margin-bottom:20px">
+        <label>密码</label>
+        <input type="password" id="login-pass" placeholder="请输入密码" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:11px;font-size:14px" onclick="doLogin()">登 录</button>
+      <div class="auth-hint">没有账号？点击上方「注册」创建<br>数据仅存储在您本人的浏览器中</div>
+    </div>
+
+    <!-- 注册表单 -->
+    <div id="auth-register-form" style="display:none">
+      <div id="reg-error" class="auth-error"></div>
+      <div id="reg-success" class="auth-success"></div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>用户名（2-20个字符）</label>
+        <input type="text" id="reg-user" placeholder="请设置用户名" autocomplete="username" maxlength="20">
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>密码（至少6位）</label>
+        <input type="password" id="reg-pass" placeholder="请设置密码" autocomplete="new-password">
+      </div>
+      <div class="form-group" style="margin-bottom:20px">
+        <label>确认密码</label>
+        <input type="password" id="reg-pass2" placeholder="再次输入密码" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter')doRegister()">
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:11px;font-size:14px" onclick="doRegister()">注 册</button>
+      <div class="auth-hint">注册后数据自动保存在此设备<br>不同用户的数据相互独立隔离</div>
+    </div>
+  </div>
+</div>
 
 <!-- Sidebar -->
 <aside class="sidebar">
@@ -244,6 +340,11 @@
   <div class="nav-item" onclick="showPage('settings')">
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
     <span>公司设置</span>
+  </div>
+  <div class="sidebar-user">
+    <div class="sidebar-user-label">当前账号</div>
+    <div class="sidebar-user-name" id="sidebar-username">—</div>
+    <button class="sidebar-logout" onclick="doLogout()">⏻ 退出登录</button>
   </div>
 </aside>
 
@@ -899,6 +1000,105 @@ fetchRates();
 setInterval(fetchRates, 5 * 60 * 1000);
 
 // ═══════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════
+let currentUser = null;
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem('fts_users') || '{}'); } catch { return {}; }
+}
+function saveUsers(u) { localStorage.setItem('fts_users', JSON.stringify(u)); }
+
+function switchAuthTab(tab) {
+  document.getElementById('auth-login-form').style.display   = tab === 'login'    ? '' : 'none';
+  document.getElementById('auth-register-form').style.display = tab === 'register' ? '' : 'none';
+  document.querySelectorAll('.auth-tab').forEach((t, i) =>
+    t.classList.toggle('active', (tab==='login'&&i===0)||(tab==='register'&&i===1))
+  );
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('reg-error').style.display   = 'none';
+  document.getElementById('reg-success').style.display = 'none';
+}
+
+function setAuthError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+}
+
+async function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  document.getElementById('login-error').style.display = 'none';
+  if (!user || !pass) { setAuthError('login-error','请填写用户名和密码'); return; }
+  const users = getUsers();
+  if (!users[user]) { setAuthError('login-error','用户名不存在，请先注册'); return; }
+  const hash = await sha256(pass);
+  if (users[user].hash !== hash) { setAuthError('login-error','密码错误，请重试'); return; }
+  loginSuccess(user);
+}
+
+async function doRegister() {
+  const user = document.getElementById('reg-user').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  const pass2 = document.getElementById('reg-pass2').value;
+  document.getElementById('reg-error').style.display   = 'none';
+  document.getElementById('reg-success').style.display = 'none';
+  if (!user || !pass) { setAuthError('reg-error','请填写用户名和密码'); return; }
+  if (user.length < 2)  { setAuthError('reg-error','用户名至少2个字符'); return; }
+  if (pass.length < 6)  { setAuthError('reg-error','密码至少6位'); return; }
+  if (pass !== pass2)   { setAuthError('reg-error','两次密码不一致'); return; }
+  const users = getUsers();
+  if (users[user]) { setAuthError('reg-error','该用户名已被注册'); return; }
+  const hash = await sha256(pass);
+  users[user] = { hash, createdAt: new Date().toISOString() };
+  saveUsers(users);
+  const s = document.getElementById('reg-success');
+  s.textContent = '注册成功！正在登录…'; s.style.display = 'block';
+  setTimeout(() => loginSuccess(user), 800);
+}
+
+function loginSuccess(username) {
+  currentUser = username;
+  localStorage.setItem('fts_session', username);
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('sidebar-username').textContent = username;
+  // Reset & reload state for this user
+  state = { products:[], quotes:[], quoteItems:[], settings:{}, editingProductId:null };
+  load();
+  renderDashboard();
+}
+
+function doLogout() {
+  if (!confirm(`确认退出账号「${currentUser}」？`)) return;
+  currentUser = null;
+  localStorage.removeItem('fts_session');
+  state = { products:[], quotes:[], quoteItems:[], settings:{}, editingProductId:null };
+  // Reset auth form
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('sidebar-username').textContent = '—';
+  switchAuthTab('login');
+  document.getElementById('auth-overlay').style.display = 'flex';
+}
+
+function checkSession() {
+  const saved = localStorage.getItem('fts_session');
+  if (!saved) return false;
+  const users = getUsers();
+  if (!users[saved]) { localStorage.removeItem('fts_session'); return false; }
+  currentUser = saved;
+  document.getElementById('sidebar-username').textContent = saved;
+  document.getElementById('auth-overlay').style.display = 'none';
+  return true;
+}
+
+// ═══════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════
 let state = {
@@ -911,18 +1111,19 @@ let state = {
 
 function load() {
   try {
-    const s = localStorage.getItem('fts_state');
+    const key = currentUser ? `fts_data_${currentUser}` : 'fts_state';
+    const s = localStorage.getItem(key);
     if (s) Object.assign(state, JSON.parse(s));
   } catch(e) {}
-  // Default settings
-  if (!state.settings) state.settings = {};
-  if (!state.products) state.products = [];
-  if (!state.quotes) state.quotes = [];
-  if (!state.quoteItems) state.quoteItems = [];
+  if (!state.settings)    state.settings = {};
+  if (!state.products)    state.products = [];
+  if (!state.quotes)      state.quotes = [];
+  if (!state.quoteItems)  state.quoteItems = [];
 }
 
 function save() {
-  localStorage.setItem('fts_state', JSON.stringify(state));
+  const key = currentUser ? `fts_data_${currentUser}` : 'fts_state';
+  localStorage.setItem(key, JSON.stringify(state));
 }
 
 // ═══════════════════════════════════════
@@ -1618,8 +1819,12 @@ function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&
 // ═══════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════
-load();
-renderDashboard();
+if (checkSession()) {
+  // 已有登录会话，直接进入
+  load();
+  renderDashboard();
+}
+// 否则 auth-overlay 保持显示，等用户登录
 </script>
 </body>
 </html>
