@@ -298,6 +298,40 @@
   .term-ext-link { display: inline-flex; align-items: center; gap: 5px; color: var(--primary); font-size: 12px; text-decoration: none; padding: 6px 12px; border: 1px solid var(--primary); border-radius: 6px; margin-top: 4px; transition: all .15s; }
   .term-ext-link:hover { background: var(--primary); color: #fff; }
 
+  /* Product modal tabs */
+  .modal-tabs { display:flex; border-bottom:2px solid var(--border); margin:-4px -24px 20px; padding:0 24px; gap:0; }
+  .modal-tab-btn {
+    padding:10px 16px; cursor:pointer; font-size:13px; font-weight:500;
+    color:var(--text-secondary); border-bottom:3px solid transparent; margin-bottom:-2px;
+    transition:all .15s; white-space:nowrap;
+  }
+  .modal-tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+  .modal-tab-btn:hover { color:var(--text); }
+  .modal-tab-pane { display:none; }
+  .modal-tab-pane.active { display:block; }
+
+  /* Image upload */
+  .img-upload-area {
+    border:2px dashed var(--border); border-radius:8px; padding:20px;
+    text-align:center; cursor:pointer; transition:all .15s; position:relative;
+  }
+  .img-upload-area:hover { border-color:var(--primary); background:#f0f7ff; }
+  .img-upload-area input[type=file] { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%; }
+  .img-preview { max-width:100%; max-height:180px; border-radius:6px; margin-top:10px; display:none; object-fit:contain; }
+  .img-thumb { width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--border); }
+
+  /* File upload */
+  .file-upload-row { display:flex;align-items:center;gap:8px;margin-top:8px; }
+  .file-badge {
+    display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
+    background:#e8f0fe;color:var(--primary);border-radius:5px;font-size:12px;font-weight:500;
+  }
+  .manual-link { color:var(--primary);font-size:12px;text-decoration:none; }
+  .manual-link:hover { text-decoration:underline; }
+
+  /* Supplier info in table */
+  .supplier-chip { display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--text-secondary); }
+
   /* Responsive */
   @media (max-width: 768px) {
     :root { --sidebar-width: 56px; }
@@ -459,8 +493,8 @@
           <table>
             <thead>
               <tr>
-                <th>货号</th><th>产品名称</th><th>规格</th><th>采购价(¥)</th>
-                <th>库存量</th><th>单位</th><th>库存状态</th><th>操作</th>
+                <th style="width:52px">图</th><th>货号 / 产品名称</th><th>采购价(¥)</th>
+                <th>库存</th><th>单位</th><th>仓库</th><th>库存状态</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="inventory-tbody"></tbody>
@@ -743,52 +777,163 @@
 
 <!-- Product Modal -->
 <div class="modal-overlay" id="product-modal">
-  <div class="modal">
+  <div class="modal" style="max-width:700px">
     <div class="modal-header">
       <h3 id="product-modal-title">新增产品</h3>
       <button class="modal-close" onclick="closeModal('product-modal')">&times;</button>
     </div>
-    <div class="form-grid">
-      <div class="form-group">
-        <label>货号 / SKU</label>
-        <input type="text" id="p-sku" placeholder="SKU-001">
-      </div>
-      <div class="form-group">
-        <label>产品名称 *</label>
-        <input type="text" id="p-name" placeholder="产品名称">
-      </div>
-      <div class="form-group" style="grid-column:1/-1">
-        <label>规格描述</label>
-        <input type="text" id="p-spec" placeholder="尺寸、颜色、材质等">
-      </div>
-      <div class="form-group">
-        <label>采购价 (¥) *</label>
-        <input type="number" id="p-cost" placeholder="0.00" step="0.01">
-      </div>
-      <div class="form-group">
-        <label>建议报价 (外币)</label>
-        <input type="number" id="p-price" placeholder="0.00" step="0.01">
-      </div>
-      <div class="form-group">
-        <label>库存数量 *</label>
-        <input type="number" id="p-stock" placeholder="0">
-      </div>
-      <div class="form-group">
-        <label>单位</label>
-        <select id="p-unit">
-          <option>PCS</option><option>SET</option><option>BOX</option><option>CTN</option>
-          <option>KG</option><option>M</option><option>M²</option><option>套</option><option>个</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>预警库存</label>
-        <input type="number" id="p-min-stock" placeholder="10">
-      </div>
-      <div class="form-group">
-        <label>净重 (kg/件)</label>
-        <input type="number" id="p-weight" placeholder="0.000" step="0.001">
+
+    <!-- Tabs -->
+    <div class="modal-tabs">
+      <div class="modal-tab-btn active" onclick="switchPTab('basic')">📦 基本信息</div>
+      <div class="modal-tab-btn" onclick="switchPTab('warehouse')">🏭 仓储位置</div>
+      <div class="modal-tab-btn" onclick="switchPTab('supplier')">🤝 供应商</div>
+      <div class="modal-tab-btn" onclick="switchPTab('media')">📁 产品资料</div>
+    </div>
+
+    <!-- Tab: 基本信息 -->
+    <div id="ptab-basic" class="modal-tab-pane active">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>货号 / SKU</label>
+          <input type="text" id="p-sku" placeholder="SKU-001">
+        </div>
+        <div class="form-group">
+          <label>产品名称 *</label>
+          <input type="text" id="p-name" placeholder="产品名称">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>规格描述</label>
+          <input type="text" id="p-spec" placeholder="尺寸、颜色、材质等">
+        </div>
+        <div class="form-group">
+          <label>采购价 (¥) *</label>
+          <input type="number" id="p-cost" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>建议报价 (外币)</label>
+          <input type="number" id="p-price" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>库存数量 *</label>
+          <input type="number" id="p-stock" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>单位</label>
+          <select id="p-unit">
+            <option>PCS</option><option>SET</option><option>BOX</option><option>CTN</option>
+            <option>KG</option><option>M</option><option>M²</option><option>套</option><option>个</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>预警库存</label>
+          <input type="number" id="p-min-stock" placeholder="10">
+        </div>
+        <div class="form-group">
+          <label>净重 (kg/件)</label>
+          <input type="number" id="p-weight" placeholder="0.000" step="0.001">
+        </div>
       </div>
     </div>
+
+    <!-- Tab: 仓储位置 -->
+    <div id="ptab-warehouse" class="modal-tab-pane">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>所在仓库</label>
+          <input type="text" id="p-warehouse" placeholder="例：广州仓、上海保税仓">
+        </div>
+        <div class="form-group">
+          <label>库位编号</label>
+          <input type="text" id="p-location" placeholder="例：A区-3排-5格">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>仓储备注</label>
+          <textarea id="p-warehouse-note" placeholder="温湿度要求、存放注意事项等..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: 供应商 -->
+    <div id="ptab-supplier" class="modal-tab-pane">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>供应商 / 厂家名称</label>
+          <input type="text" id="p-sup-name" placeholder="XX科技有限公司">
+        </div>
+        <div class="form-group">
+          <label>联系人</label>
+          <input type="text" id="p-sup-contact" placeholder="姓名">
+        </div>
+        <div class="form-group">
+          <label>联系电话</label>
+          <input type="text" id="p-sup-phone" placeholder="+86-xxx-xxxx-xxxx">
+        </div>
+        <div class="form-group">
+          <label>微信 / WhatsApp</label>
+          <input type="text" id="p-sup-wechat" placeholder="微信号或WhatsApp">
+        </div>
+        <div class="form-group">
+          <label>邮箱</label>
+          <input type="text" id="p-sup-email" placeholder="supplier@example.com">
+        </div>
+        <div class="form-group">
+          <label>最小起订量 (MOQ)</label>
+          <input type="number" id="p-sup-moq" placeholder="100">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>供应商备注</label>
+          <textarea id="p-sup-note" placeholder="账期、交货周期、合作细节等..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: 产品资料 -->
+    <div id="ptab-media" class="modal-tab-pane">
+      <div style="margin-bottom:20px">
+        <label style="font-size:12px;color:var(--text-secondary);font-weight:500;display:block;margin-bottom:8px">产品样图</label>
+        <div class="img-upload-area" onclick="document.getElementById('p-image-input').click()">
+          <input type="file" id="p-image-input" accept="image/*" style="display:none" onchange="handleProductImage(this)">
+          <div id="p-image-placeholder">
+            <svg width="32" height="32" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 8px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <div style="font-size:13px;color:var(--text-secondary)">点击上传产品图片</div>
+            <div style="font-size:11px;color:#aaa;margin-top:4px">自动压缩，支持 JPG / PNG / WEBP</div>
+          </div>
+          <img id="p-image-preview" class="img-preview">
+        </div>
+        <div id="p-image-actions" style="display:none;margin-top:8px;text-align:right">
+          <button class="btn btn-ghost btn-sm" onclick="clearProductImage(event)">✕ 移除图片</button>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:12px;color:var(--text-secondary);font-weight:500;display:block;margin-bottom:8px">产品说明书 / 规格书</label>
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="form-group">
+            <label>方式一：粘贴链接（推荐）</label>
+            <input type="text" id="p-manual-url" placeholder="Google Drive / OneDrive / 百度网盘 分享链接...">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin:10px 0;color:var(--text-secondary);font-size:12px">
+          <div style="flex:1;height:1px;background:var(--border)"></div> 或 <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <div class="form-group">
+          <label>方式二：上传文件（PDF · 建议小于 2MB）</label>
+          <div class="file-upload-row">
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('p-manual-input').click()">📎 选择文件</button>
+            <input type="file" id="p-manual-input" accept=".pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="handleProductManual(this)">
+            <span id="p-manual-filename" style="font-size:12px;color:var(--text-secondary)">未选择文件</span>
+          </div>
+          <div id="p-manual-size-warn" style="color:var(--danger);font-size:11px;margin-top:4px;display:none">⚠️ 文件较大，建议使用网盘链接方式</div>
+        </div>
+        <div id="p-manual-current" style="display:none;margin-top:8px">
+          <span style="font-size:12px;color:var(--text-secondary)">当前说明书：</span>
+          <span id="p-manual-current-name" class="file-badge"></span>
+          <button class="btn btn-ghost btn-sm" style="margin-left:8px" onclick="clearProductManual()">✕ 移除</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('product-modal')">取消</button>
       <button class="btn btn-primary" onclick="saveProduct()">保存</button>
@@ -1274,6 +1419,90 @@ function renderDashboard() {
 // ═══════════════════════════════════════
 //  INVENTORY
 // ═══════════════════════════════════════
+// ── Product modal tab switch ──
+function switchPTab(name) {
+  document.querySelectorAll('.modal-tab-btn').forEach((b,i) =>
+    b.classList.toggle('active', ['basic','warehouse','supplier','media'][i]===name));
+  document.querySelectorAll('.modal-tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('ptab-'+name).classList.add('active');
+}
+
+// ── Image helpers ──
+let _pendingImage = null; // base64 or null
+
+async function handleProductImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  _pendingImage = await compressImage(file, 600, 0.75);
+  const prev = document.getElementById('p-image-preview');
+  prev.src = _pendingImage; prev.style.display = 'block';
+  document.getElementById('p-image-placeholder').style.display = 'none';
+  document.getElementById('p-image-actions').style.display = 'block';
+}
+
+function compressImage(file, maxW, quality) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale; canvas.height = img.height * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function clearProductImage(e) {
+  if (e) e.stopPropagation();
+  _pendingImage = 'CLEAR';
+  document.getElementById('p-image-preview').style.display = 'none';
+  document.getElementById('p-image-preview').src = '';
+  document.getElementById('p-image-placeholder').style.display = '';
+  document.getElementById('p-image-actions').style.display = 'none';
+  document.getElementById('p-image-input').value = '';
+}
+
+// ── Manual (document) helpers ──
+let _pendingManual = null; // { name, data } or null
+
+async function handleProductManual(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const warnEl = document.getElementById('p-manual-size-warn');
+  warnEl.style.display = file.size > 2*1024*1024 ? 'block' : 'none';
+  const reader = new FileReader();
+  reader.onload = e => {
+    _pendingManual = { name: file.name, data: e.target.result };
+    document.getElementById('p-manual-filename').textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearProductManual() {
+  _pendingManual = 'CLEAR';
+  document.getElementById('p-manual-current').style.display = 'none';
+  document.getElementById('p-manual-input').value = '';
+  document.getElementById('p-manual-filename').textContent = '未选择文件';
+}
+
+// ── Show stored manual ──
+function openManual(pid) {
+  const p = state.products.find(x => x.id === pid);
+  if (!p) return;
+  if (p.manualUrl) { window.open(p.manualUrl, '_blank'); return; }
+  if (p.manualFile) {
+    const a = document.createElement('a');
+    a.href = p.manualFile; a.download = p.manualName || '产品说明书';
+    a.click();
+  }
+}
+
 function renderInventory() {
   const q = (document.getElementById('inventory-search')||{value:''}).value.toLowerCase();
   const list = state.products.filter(p =>
@@ -1287,18 +1516,36 @@ function renderInventory() {
   tbody.innerHTML = list.map(p => {
     const min = p.minStock || 10;
     let badge, status;
-    if (p.stock === 0) { badge = 'badge-danger'; status = '缺货'; }
-    else if (p.stock <= min) { badge = 'badge-warning'; status = '低库存'; }
-    else { badge = 'badge-success'; status = '正常'; }
+    if (p.stock === 0)       { badge='badge-danger';  status='缺货'; }
+    else if (p.stock <= min) { badge='badge-warning'; status='低库存'; }
+    else                      { badge='badge-success'; status='正常'; }
+
+    const thumbHtml = p.image
+      ? `<img src="${p.image}" class="img-thumb" alt="">`
+      : `<div style="width:40px;height:40px;background:var(--bg);border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px">📦</div>`;
+
+    const warehouseHtml = p.warehouse
+      ? `<span class="badge badge-info" style="font-size:10px">${escHtml(p.warehouse)}</span>${p.location?`<br><span style="font-size:10px;color:var(--text-secondary)">${escHtml(p.location)}</span>`:''}`
+      : '<span style="color:var(--text-secondary);font-size:12px">—</span>';
+
+    const hasManual = p.manualUrl || p.manualFile;
+    const hasSupplier = p.supplier?.name;
+
     return `<tr>
-      <td><span style="font-family:monospace;font-size:12px">${p.sku||'—'}</span></td>
-      <td><strong>${p.name}</strong>${p.spec?`<br><span style="font-size:11px;color:var(--text-secondary)">${p.spec}</span>`:''}</td>
-      <td>${p.spec||'—'}</td>
+      <td>${thumbHtml}</td>
+      <td>
+        <strong>${escHtml(p.name)}</strong>
+        ${p.sku?`<br><span style="font-family:monospace;font-size:11px;color:var(--text-secondary)">${escHtml(p.sku)}</span>`:''}
+        ${p.spec?`<br><span style="font-size:11px;color:var(--text-secondary)">${escHtml(p.spec)}</span>`:''}
+        ${hasSupplier?`<br><span class="supplier-chip">🤝 ${escHtml(p.supplier.name)}</span>`:''}
+      </td>
       <td>¥${(+p.cost).toFixed(2)}</td>
       <td style="font-weight:600">${p.stock}</td>
       <td>${p.unit}</td>
+      <td>${warehouseHtml}</td>
       <td><span class="badge ${badge}">${status}</span></td>
       <td>
+        ${hasManual?`<button class="btn btn-ghost btn-sm" onclick="openManual('${p.id}')" title="打开产品说明书">📄 资料</button>`:''}
         <button class="btn btn-ghost btn-sm" onclick="openProductModal('${p.id}')">编辑</button>
         <button class="btn btn-sm" style="background:#fce8e6;color:var(--danger);margin-left:4px" onclick="deleteProduct('${p.id}')">删除</button>
       </td>
@@ -1308,46 +1555,125 @@ function renderInventory() {
 
 function openProductModal(id) {
   state.editingProductId = id || null;
-  const modal = document.getElementById('product-modal');
+  _pendingImage = null; _pendingManual = null;
+  switchPTab('basic');
+
+  const clearImg = () => {
+    document.getElementById('p-image-preview').style.display = 'none';
+    document.getElementById('p-image-preview').src = '';
+    document.getElementById('p-image-placeholder').style.display = '';
+    document.getElementById('p-image-actions').style.display = 'none';
+    document.getElementById('p-image-input').value = '';
+  };
+  const clearManualUI = () => {
+    document.getElementById('p-manual-current').style.display = 'none';
+    document.getElementById('p-manual-filename').textContent = '未选择文件';
+    document.getElementById('p-manual-size-warn').style.display = 'none';
+    document.getElementById('p-manual-input').value = '';
+  };
+
   if (id) {
     const p = state.products.find(x => x.id === id);
     if (!p) return;
     document.getElementById('product-modal-title').textContent = '编辑产品';
-    document.getElementById('p-sku').value = p.sku || '';
-    document.getElementById('p-name').value = p.name;
-    document.getElementById('p-spec').value = p.spec || '';
-    document.getElementById('p-cost').value = p.cost;
-    document.getElementById('p-price').value = p.price || '';
-    document.getElementById('p-stock').value = p.stock;
-    document.getElementById('p-unit').value = p.unit;
+    // Basic
+    document.getElementById('p-sku').value       = p.sku || '';
+    document.getElementById('p-name').value      = p.name;
+    document.getElementById('p-spec').value      = p.spec || '';
+    document.getElementById('p-cost').value      = p.cost;
+    document.getElementById('p-price').value     = p.price || '';
+    document.getElementById('p-stock').value     = p.stock;
+    document.getElementById('p-unit').value      = p.unit;
     document.getElementById('p-min-stock').value = p.minStock || '';
-    document.getElementById('p-weight').value = p.weight || '';
+    document.getElementById('p-weight').value    = p.weight || '';
+    // Warehouse
+    document.getElementById('p-warehouse').value      = p.warehouse || '';
+    document.getElementById('p-location').value       = p.location || '';
+    document.getElementById('p-warehouse-note').value = p.warehouseNote || '';
+    // Supplier
+    const s = p.supplier || {};
+    document.getElementById('p-sup-name').value    = s.name || '';
+    document.getElementById('p-sup-contact').value = s.contact || '';
+    document.getElementById('p-sup-phone').value   = s.phone || '';
+    document.getElementById('p-sup-wechat').value  = s.wechat || '';
+    document.getElementById('p-sup-email').value   = s.email || '';
+    document.getElementById('p-sup-moq').value     = s.moq || '';
+    document.getElementById('p-sup-note').value    = s.note || '';
+    // Media - image
+    if (p.image) {
+      document.getElementById('p-image-preview').src = p.image;
+      document.getElementById('p-image-preview').style.display = 'block';
+      document.getElementById('p-image-placeholder').style.display = 'none';
+      document.getElementById('p-image-actions').style.display = 'block';
+    } else clearImg();
+    // Media - manual
+    document.getElementById('p-manual-url').value = p.manualUrl || '';
+    clearManualUI();
+    if (p.manualFile || p.manualName) {
+      document.getElementById('p-manual-current').style.display = 'block';
+      document.getElementById('p-manual-current-name').textContent = p.manualName || '已上传文件';
+    }
   } else {
     document.getElementById('product-modal-title').textContent = '新增产品';
-    ['p-sku','p-name','p-spec','p-cost','p-price','p-stock','p-min-stock','p-weight'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('p-unit').value = 'PCS';
+    ['p-sku','p-name','p-spec','p-cost','p-price','p-stock','p-min-stock','p-weight',
+     'p-warehouse','p-location','p-warehouse-note',
+     'p-sup-name','p-sup-contact','p-sup-phone','p-sup-wechat','p-sup-email','p-sup-moq','p-sup-note',
+     'p-manual-url'].forEach(fid => document.getElementById(fid).value = '');
+    document.getElementById('p-unit').value  = 'PCS';
     document.getElementById('p-stock').value = 0;
+    clearImg(); clearManualUI();
   }
-  modal.classList.add('show');
+  document.getElementById('product-modal').classList.add('show');
 }
 
 function saveProduct() {
   const name = document.getElementById('p-name').value.trim();
   const cost = parseFloat(document.getElementById('p-cost').value);
   const stock = parseInt(document.getElementById('p-stock').value);
-  if (!name) return alert('请输入产品名称');
-  if (isNaN(cost)) return alert('请输入采购价');
+  if (!name) { switchPTab('basic'); return alert('请输入产品名称'); }
+  if (isNaN(cost)) { switchPTab('basic'); return alert('请输入采购价'); }
+
+  // Get existing product (for preserving image/manual if not changed)
+  const existing = state.editingProductId ? state.products.find(p=>p.id===state.editingProductId) : {};
+
+  // Handle image
+  let image = existing?.image || null;
+  if (_pendingImage === 'CLEAR') image = null;
+  else if (_pendingImage) image = _pendingImage;
+
+  // Handle manual
+  let manualFile = existing?.manualFile || null;
+  let manualName = existing?.manualName || null;
+  if (_pendingManual === 'CLEAR') { manualFile = null; manualName = null; }
+  else if (_pendingManual && _pendingManual !== 'CLEAR') {
+    manualFile = _pendingManual.data; manualName = _pendingManual.name;
+  }
 
   const data = {
-    sku: document.getElementById('p-sku').value.trim(),
-    name,
-    spec: document.getElementById('p-spec').value.trim(),
-    cost,
-    price: parseFloat(document.getElementById('p-price').value) || 0,
+    sku:      document.getElementById('p-sku').value.trim(),
+    name, spec: document.getElementById('p-spec').value.trim(),
+    cost, price: parseFloat(document.getElementById('p-price').value) || 0,
     stock: isNaN(stock) ? 0 : stock,
     unit: document.getElementById('p-unit').value,
     minStock: parseInt(document.getElementById('p-min-stock').value) || 10,
-    weight: parseFloat(document.getElementById('p-weight').value) || 0,
+    weight:   parseFloat(document.getElementById('p-weight').value) || 0,
+    // Warehouse
+    warehouse:     document.getElementById('p-warehouse').value.trim(),
+    location:      document.getElementById('p-location').value.trim(),
+    warehouseNote: document.getElementById('p-warehouse-note').value.trim(),
+    // Supplier
+    supplier: {
+      name:    document.getElementById('p-sup-name').value.trim(),
+      contact: document.getElementById('p-sup-contact').value.trim(),
+      phone:   document.getElementById('p-sup-phone').value.trim(),
+      wechat:  document.getElementById('p-sup-wechat').value.trim(),
+      email:   document.getElementById('p-sup-email').value.trim(),
+      moq:     document.getElementById('p-sup-moq').value.trim(),
+      note:    document.getElementById('p-sup-note').value.trim(),
+    },
+    // Media
+    image, manualUrl: document.getElementById('p-manual-url').value.trim(),
+    manualFile, manualName,
   };
 
   if (state.editingProductId) {
