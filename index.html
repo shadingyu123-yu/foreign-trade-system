@@ -254,6 +254,50 @@
   }
   .sidebar-logout:hover { background: rgba(234,67,53,0.4); color: #fff; }
 
+  /* Custom Select Dropdown */
+  .csd { position: relative; user-select: none; }
+  .csd-trigger {
+    display: flex; align-items: center; justify-content: space-between;
+    border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+    font-size: 13px; color: var(--text); background: var(--bg); cursor: pointer;
+    transition: border .15s; min-height: 36px; gap: 6px;
+  }
+  .csd-trigger:hover, .csd.open .csd-trigger { border-color: var(--primary); background: #fff; }
+  .csd-label { flex: 1; }
+  .csd-arrow { font-size: 10px; color: var(--text-secondary); transition: transform .2s; flex-shrink: 0; }
+  .csd.open .csd-arrow { transform: rotate(180deg); }
+  .csd-list {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: #fff; border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.13); z-index: 60; overflow: hidden;
+    max-height: 260px; overflow-y: auto;
+  }
+  .csd.open .csd-list { display: block; }
+  .csd-item {
+    display: flex; align-items: center; padding: 9px 12px; cursor: pointer;
+    font-size: 13px; gap: 8px; transition: background .1s; border-bottom: 1px solid var(--border);
+  }
+  .csd-item:last-child { border-bottom: none; }
+  .csd-item:hover { background: #f0f7ff; }
+  .csd-item.selected { background: #e8f0fe; color: var(--primary); font-weight: 600; }
+  .csd-item-label { flex: 1; line-height: 1.4; }
+  .csd-item-sub { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
+  .csd-info-btn {
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 5px;
+    background: #e8f0fe; color: var(--primary); font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none; transition: all .15s; padding: 0;
+  }
+  .csd-info-btn:hover { background: var(--primary); color: #fff; transform: scale(1.1); }
+
+  /* Term Info Modal */
+  .term-block { margin-bottom: 18px; }
+  .term-flag { font-size: 16px; margin-right: 6px; }
+  .term-block-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 8px; display: flex; align-items: center; }
+  .term-block-text { font-size: 13px; line-height: 1.75; color: var(--text); background: var(--bg); padding: 12px 14px; border-radius: 6px; }
+  .term-ext-link { display: inline-flex; align-items: center; gap: 5px; color: var(--primary); font-size: 12px; text-decoration: none; padding: 6px 12px; border: 1px solid var(--primary); border-radius: 6px; margin-top: 4px; transition: all .15s; }
+  .term-ext-link:hover { background: var(--primary); color: #fff; }
+
   /* Responsive */
   @media (max-width: 768px) {
     :root { --sidebar-width: 56px; }
@@ -566,25 +610,36 @@
                 </div>
                 <div class="form-group">
                   <label>币种</label>
-                  <select id="q-currency">
-                    <option>USD</option><option>EUR</option><option>GBP</option><option>JPY</option><option>AUD</option>
-                  </select>
+                  <div class="csd" id="csd-q-currency">
+                    <div class="csd-trigger" onclick="toggleCSD('csd-q-currency')">
+                      <span class="csd-label" id="csd-q-currency-label">USD（美元）</span>
+                      <span class="csd-arrow">▾</span>
+                    </div>
+                    <div class="csd-list" id="csd-q-currency-list"></div>
+                  </div>
+                  <input type="hidden" id="q-currency" value="USD">
                 </div>
                 <div class="form-group">
                   <label>贸易条款</label>
-                  <select id="q-incoterm">
-                    <option>FOB</option><option>CIF</option><option>EXW</option><option>CFR</option><option>DDP</option>
-                  </select>
+                  <div class="csd" id="csd-q-incoterm">
+                    <div class="csd-trigger" onclick="toggleCSD('csd-q-incoterm')">
+                      <span class="csd-label" id="csd-q-incoterm-label">FOB · 离岸价</span>
+                      <span class="csd-arrow">▾</span>
+                    </div>
+                    <div class="csd-list" id="csd-q-incoterm-list"></div>
+                  </div>
+                  <input type="hidden" id="q-incoterm" value="FOB">
                 </div>
                 <div class="form-group">
                   <label>付款方式</label>
-                  <select id="q-payment">
-                    <option>T/T 30% deposit</option>
-                    <option>T/T in advance</option>
-                    <option>L/C at sight</option>
-                    <option>D/P</option>
-                    <option>Western Union</option>
-                  </select>
+                  <div class="csd" id="csd-q-payment">
+                    <div class="csd-trigger" onclick="toggleCSD('csd-q-payment')">
+                      <span class="csd-label" id="csd-q-payment-label">T/T 30% deposit · 电汇30%订金</span>
+                      <span class="csd-arrow">▾</span>
+                    </div>
+                    <div class="csd-list" id="csd-q-payment-list"></div>
+                  </div>
+                  <input type="hidden" id="q-payment" value="T/T 30% deposit">
                 </div>
               </div>
             </div>
@@ -738,6 +793,28 @@
       <button class="btn btn-ghost" onclick="closeModal('product-modal')">取消</button>
       <button class="btn btn-primary" onclick="saveProduct()">保存</button>
     </div>
+  </div>
+</div>
+
+<!-- Term Info Modal -->
+<div class="modal-overlay" id="term-info-overlay">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 id="term-info-title" style="font-size:15px;line-height:1.4"></h3>
+      <button class="modal-close" onclick="closeModal('term-info-overlay')">&times;</button>
+    </div>
+    <div class="term-block">
+      <div class="term-block-label"><span class="term-flag">🇨🇳</span>中文说明</div>
+      <div class="term-block-text" id="term-info-cn"></div>
+    </div>
+    <div class="term-block">
+      <div class="term-block-label"><span class="term-flag">🇬🇧</span>English Explanation</div>
+      <div class="term-block-text" id="term-info-en" style="font-family:'Segoe UI',sans-serif"></div>
+    </div>
+    <a id="term-info-link" class="term-ext-link" href="#" target="_blank" rel="noopener">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      查看官方定义（ICC / Trade.gov）
+    </a>
   </div>
 </div>
 
@@ -1645,9 +1722,9 @@ function loadQuote(number) {
   document.getElementById('q-number').value = q.number;
   document.getElementById('q-date').value = q.date;
   document.getElementById('q-valid').value = q.valid;
-  document.getElementById('q-currency').value = q.currency;
-  document.getElementById('q-incoterm').value = q.incoterm;
-  document.getElementById('q-payment').value = q.payment;
+  setCSD('csd-q-currency', q.currency);
+  setCSD('csd-q-incoterm', q.incoterm);
+  setCSD('csd-q-payment',  q.payment);
   document.getElementById('q-buyer-name').value = q.buyer.name;
   document.getElementById('q-buyer-addr').value = q.buyer.addr;
   document.getElementById('q-buyer-contact').value = q.buyer.contact;
@@ -1817,8 +1894,183 @@ function closeModal(id) { document.getElementById(id).classList.remove('show'); 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ═══════════════════════════════════════
+//  CUSTOM SELECT DROPDOWNS (报价参数)
+// ═══════════════════════════════════════
+const CSD_CURRENCIES = [
+  {value:'USD', label:'USD（美元）'},
+  {value:'EUR', label:'EUR（欧元）'},
+  {value:'GBP', label:'GBP（英镑）'},
+  {value:'JPY', label:'JPY（日元）'},
+  {value:'AUD', label:'AUD（澳元）'},
+  {value:'CAD', label:'CAD（加元）'},
+  {value:'HKD', label:'HKD（港元）'},
+  {value:'SGD', label:'SGD（新加坡元）'},
+];
+const CSD_INCOTERMS = [
+  {value:'FOB', label:'FOB · 离岸价',      sub:'Free On Board',            key:'FOB'},
+  {value:'CIF', label:'CIF · 到岸价',      sub:'Cost, Insurance & Freight',key:'CIF'},
+  {value:'EXW', label:'EXW · 工厂交货',    sub:'Ex Works',                 key:'EXW'},
+  {value:'CFR', label:'CFR · 成本加运费',  sub:'Cost and Freight',         key:'CFR'},
+  {value:'DDP', label:'DDP · 完税后交货',  sub:'Delivered Duty Paid',      key:'DDP'},
+];
+const CSD_PAYMENTS = [
+  {value:'T/T 30% deposit', label:'T/T 30% deposit', sub:'电汇 · 30%订金',  key:'TT30'},
+  {value:'T/T in advance',  label:'T/T in advance',  sub:'电汇 · 全额预付', key:'TTFull'},
+  {value:'L/C at sight',    label:'L/C at sight',    sub:'即期信用证',       key:'LC'},
+  {value:'D/P',             label:'D/P',             sub:'付款交单',         key:'DP'},
+  {value:'Western Union',   label:'Western Union',   sub:'西联汇款',         key:'WU'},
+];
+const TERM_INFO_DATA = {
+  FOB:{
+    title:'FOB · Free On Board · 离岸价',
+    cn:'卖方负责在指定装运港将货物装上买方指定的船只，此后的费用和风险由买方承担。卖方须完成出口清关手续。<br><br>📦 <b>适用</b>：海运、内河运输。中国出口最常用条款之一。<br>⚠️ <b>注意</b>：装船后货物若有损失，由买方负责。',
+    en:'Seller delivers goods on board the vessel at the named port of shipment. Risk transfers to buyer once goods are on board. Seller handles export customs clearance.<br><br>📦 <b>Best for</b>: Sea and inland waterway transport.',
+    link:'https://iccwbo.org/resources-for-business/incoterms-rules/incoterms-2020/'
+  },
+  CIF:{
+    title:'CIF · Cost, Insurance and Freight · 到岸价',
+    cn:'卖方支付将货物运至目的港的运费，并为货物投保最低险别海上保险。风险在装运港装船时转移给买方。<br><br>💡 <b>特别注意</b>：保险由卖方购买，但受益人是买方。保险金额通常为货值的110%。',
+    en:'Seller pays freight and minimum insurance to bring goods to the destination port. Risk transfers when goods are loaded. Seller purchases insurance policy for the buyer\'s benefit (typically 110% of cargo value).',
+    link:'https://iccwbo.org/resources-for-business/incoterms-rules/incoterms-2020/'
+  },
+  EXW:{
+    title:'EXW · Ex Works · 工厂交货',
+    cn:'卖方仅需在工厂或仓库备好货物，买方承担从取货地开始的全部费用与风险，包括出口报关。<br><br>✅ 对<b>卖方责任最小</b>；❌ 对<b>买方责任最大</b>。适合买方有能力自行安排运输的场景。',
+    en:'Seller only makes goods available at their premises. Buyer bears ALL costs and risks from that point, including export customs clearance.<br><br>✅ Minimum obligation for seller. ❌ Maximum obligation for buyer.',
+    link:'https://iccwbo.org/resources-for-business/incoterms-rules/incoterms-2020/'
+  },
+  CFR:{
+    title:'CFR · Cost and Freight · 成本加运费',
+    cn:'卖方支付将货物运至目的港的运费，但<b>不负责购买保险</b>。风险在装运港装船时转移给买方，买方须自行安排保险。<br><br>⚠️ 仅适用于海运和内河运输。与CIF的区别：保险责任由买方承担。',
+    en:'Seller pays freight to the destination port but does NOT pay for insurance. Risk transfers when goods are loaded. Buyer must arrange their own insurance.<br><br>Only for sea and inland waterway transport.',
+    link:'https://iccwbo.org/resources-for-business/incoterms-rules/incoterms-2020/'
+  },
+  DDP:{
+    title:'DDP · Delivered Duty Paid · 完税后交货',
+    cn:'卖方承担将货物送达买方指定目的地的<b>全部责任</b>，包括出口报关、国际运输、进口清关及关税。<br><br>✅ 对<b>买方最便利</b>；❌ 对<b>卖方责任最重</b>。卖方须熟悉目的国进口法规。',
+    en:'Seller takes maximum responsibility: delivering to buyer\'s destination and paying ALL costs including export/import duties and taxes.<br><br>✅ Maximum convenience for buyer. ❌ Maximum obligation for seller.',
+    link:'https://iccwbo.org/resources-for-business/incoterms-rules/incoterms-2020/'
+  },
+  TT30:{
+    title:'T/T 30% Deposit · 电汇，30%订金',
+    cn:'外贸<b>最常用</b>付款方式。下单后支付30%订金开始生产，余款在发货前或收到提单副本后支付。<br><br>⚖️ 双方风险较为平衡。买卖双方均有一定保障，适用于有一定信任基础的合作关系。',
+    en:'Most common payment in international trade. 30% deposit upon order confirmation, balance before shipment or against copy B/L.<br><br>⚖️ Balanced risk for both parties. Good for established business relationships.',
+    link:'https://www.trade.gov/payment-methods'
+  },
+  TTFull:{
+    title:'T/T in Advance · 电汇全额预付',
+    cn:'买方在发货前通过银行电汇支付<b>全部货款</b>。对卖方最安全，买方风险最高。<br><br>📌 适用场景：新客户首单、样品款、小额急单。付款后若卖方违约，追款困难。',
+    en:'Full payment by wire transfer before shipment. Safest for seller, highest risk for buyer.<br><br>📌 Best for: New customers, samples, small urgent orders.',
+    link:'https://www.trade.gov/payment-methods'
+  },
+  LC:{
+    title:'L/C at Sight · 即期信用证',
+    cn:'银行充当担保方。买方向银行申请开立信用证，卖方交货后提交符合要求的单据，开证行<b>见单立即付款</b>。<br><br>🏦 安全性最高，但手续复杂、银行费用较高（通常0.1%~0.5%货值）。适合大额订单。',
+    en:'The bank acts as guarantor. Buyer\'s bank pays seller immediately upon presentation of compliant shipping documents.<br><br>🏦 Highest security, but complex documentation and bank fees (typically 0.1%~0.5% of value). Best for large orders.',
+    link:'https://www.trade.gov/payment-methods'
+  },
+  DP:{
+    title:'D/P · Documents against Payment · 付款交单',
+    cn:'卖方发货后，通过银行将提单等货运单据交给买方银行，买方<b>付款后</b>才能取得单据并提货。<br><br>📊 风险介于T/T和L/C之间。银行只传递单据，不承担付款担保责任。',
+    en:'After shipment, seller\'s bank sends shipping documents to buyer\'s bank. Buyer must pay to receive documents to claim goods.<br><br>📊 Risk between T/T and L/C. Bank transmits documents but does not guarantee payment.',
+    link:'https://www.trade.gov/payment-methods'
+  },
+  WU:{
+    title:'Western Union · 西联汇款',
+    cn:'国际汇款服务，无需银行账号，收款方凭参考号在当地网点取款。速度快（通常数分钟到账），手续费较高。<br><br>⚠️ <b>款项无法撤回</b>，买方风险极高。仅适合小额急单，不建议用于大额商业贸易。',
+    en:'International money transfer service — no bank account needed. Fast (often minutes) but higher fees and non-reversible.<br><br>⚠️ Funds cannot be recalled. High risk for buyer. Suitable for small urgent payments only.',
+    link:'https://www.westernunion.com'
+  },
+};
+
+function initCSDLists() {
+  // 币种
+  const cList = document.getElementById('csd-q-currency-list');
+  if (cList) cList.innerHTML = CSD_CURRENCIES.map(c =>
+    `<div class="csd-item${c.value==='USD'?' selected':''}" onclick="pickCSD('csd-q-currency','${c.value}','${c.label}')">
+       <span class="csd-item-label">${c.label}</span>
+     </div>`).join('');
+  // 贸易条款
+  const iList = document.getElementById('csd-q-incoterm-list');
+  if (iList) iList.innerHTML = CSD_INCOTERMS.map(t =>
+    `<div class="csd-item${t.value==='FOB'?' selected':''}" onclick="pickCSD('csd-q-incoterm','${t.value}','${t.label}')">
+       <span class="csd-item-label">
+         ${t.label}<br><span class="csd-item-sub">${t.sub}</span>
+       </span>
+       <button class="csd-info-btn" onclick="showTermInfo('${t.key}',event)" title="查看说明">▲</button>
+     </div>`).join('');
+  // 付款方式
+  const pList = document.getElementById('csd-q-payment-list');
+  if (pList) pList.innerHTML = CSD_PAYMENTS.map(p =>
+    `<div class="csd-item${p.value==='T/T 30% deposit'?' selected':''}"
+          onclick="pickCSD('csd-q-payment',${JSON.stringify(p.value)},${JSON.stringify(p.label+' · '+p.sub)})">
+       <span class="csd-item-label">
+         ${escHtml(p.label)}<br><span class="csd-item-sub">${escHtml(p.sub)}</span>
+       </span>
+       <button class="csd-info-btn" onclick="showTermInfo('${p.key}',event)" title="查看说明">▲</button>
+     </div>`).join('');
+}
+
+function toggleCSD(id) {
+  const el = document.getElementById(id);
+  const isOpen = el.classList.contains('open');
+  document.querySelectorAll('.csd.open').forEach(c => c.classList.remove('open'));
+  if (!isOpen) el.classList.add('open');
+}
+
+function pickCSD(csdId, value, label) {
+  const inputId = csdId.replace('csd-', '');
+  const inp = document.getElementById(inputId);
+  if (inp) inp.value = value;
+  const labelEl = document.getElementById(csdId + '-label');
+  if (labelEl) labelEl.textContent = label;
+  // Update selected style
+  const list = document.getElementById(csdId + '-list');
+  if (list) {
+    list.querySelectorAll('.csd-item').forEach(item => item.classList.remove('selected'));
+    [...list.querySelectorAll('.csd-item')].find(item =>
+      item.querySelector('.csd-item-label')?.textContent.startsWith(label.split('·')[0].trim())
+    )?.classList.add('selected');
+  }
+  document.getElementById(csdId)?.classList.remove('open');
+}
+
+// Helper: set a CSD value programmatically (used by loadQuote)
+function setCSD(csdId, value) {
+  const all = [...(document.getElementById(csdId+'-list')?.querySelectorAll('.csd-item')||[])];
+  // Find matching option by hidden input value via data or label
+  const opts = csdId.includes('currency') ? CSD_CURRENCIES :
+               csdId.includes('incoterm') ? CSD_INCOTERMS : CSD_PAYMENTS;
+  const opt = opts.find(o => o.value === value);
+  if (opt) {
+    const label = opt.label + (opt.sub ? ' · '+opt.sub : '');
+    pickCSD(csdId, value, opt.label + (csdId.includes('payment') ? ' · '+opt.sub : ''));
+  }
+}
+
+function showTermInfo(key, event) {
+  if (event) event.stopPropagation();
+  const info = TERM_INFO_DATA[key];
+  if (!info) return;
+  document.getElementById('term-info-title').textContent = info.title;
+  document.getElementById('term-info-cn').innerHTML = info.cn;
+  document.getElementById('term-info-en').innerHTML = info.en;
+  document.getElementById('term-info-link').href = info.link;
+  document.querySelectorAll('.csd.open').forEach(c => c.classList.remove('open'));
+  document.getElementById('term-info-overlay').classList.add('show');
+}
+
+// Close CSD on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.csd')) document.querySelectorAll('.csd.open').forEach(c=>c.classList.remove('open'));
+});
+
+// ═══════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════
+// 初始化自定义下拉列表（不依赖登录状态）
+initCSDLists();
+
 if (checkSession()) {
   // 已有登录会话，直接进入
   load();
