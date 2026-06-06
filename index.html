@@ -447,6 +447,10 @@
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     <span>报价单</span>
   </div>
+  <div class="nav-item" onclick="showPage('orders')">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    <span>订单管理</span>
+  </div>
   <div class="nav-item" onclick="showPage('customers')">
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     <span>客户管理</span>
@@ -482,23 +486,37 @@
             <span class="card-title" style="margin:0">实时汇率</span>
             <span style="font-size:11px;color:var(--text-secondary);margin-left:8px">对人民币 · 点击任意货币可应用到利润测算</span>
           </div>
-          <span id="rate-update-time" style="font-size:11px;color:var(--text-secondary)"></span>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span id="rate-update-time" style="font-size:11px;color:var(--text-secondary)"></span>
+            <div id="rate-pager" style="display:flex;align-items:center;gap:4px"></div>
+          </div>
         </div>
-        <div id="rate-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px">
+        <div id="rate-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;min-height:150px">
           <div class="rate-loading" style="padding:8px">正在获取汇率数据…</div>
         </div>
       </div>
 
-      <!-- 7日折线图 -->
-      <div class="card" style="margin-bottom:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <div>
-            <span class="card-title" style="margin:0">近7日汇率走势</span>
-            <span style="font-size:11px;color:var(--text-secondary);margin-left:8px">相对7天前的涨跌幅（%）· 点击下方标签显示/隐藏</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- 7日折线图 -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div>
+              <span class="card-title" style="margin:0">近7日汇率走势</span>
+              <span style="font-size:11px;color:var(--text-secondary);margin-left:6px">较7天前涨跌幅</span>
+            </div>
+            <button class="btn btn-outline btn-sm" id="chart-picker-btn" onclick="toggleChartPicker()">选择币种 ▾</button>
           </div>
-          <div id="rate-chart-toggles" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+          <div id="rate-chart-toggles" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:10px;padding:10px;background:var(--bg);border-radius:8px;max-height:118px;overflow-y:auto"></div>
+          <canvas id="rate-chart" style="max-height:240px"></canvas>
         </div>
-        <canvas id="rate-chart" style="max-height:220px"></canvas>
+        <!-- 客户跟进提醒 -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span class="card-title" style="margin:0">客户跟进提醒</span>
+            <span style="font-size:11px;color:var(--text-secondary)">🕐 含客户当地时间</span>
+          </div>
+          <div id="followup-card"></div>
+        </div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -775,6 +793,9 @@
               </button>
               <button class="btn btn-ghost" onclick="saveQuote()">保存</button>
             </div>
+            <div style="margin-bottom:16px">
+              <button class="btn btn-outline" style="width:100%" onclick="convertQuoteToOrder()">📦 转为订单</button>
+            </div>
             <div id="quote-preview-area"></div>
           </div>
         </div>
@@ -790,6 +811,34 @@
               <tbody id="quotes-history-tbody"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders -->
+    <div id="page-orders" class="page">
+      <div class="stats-row" id="orders-stats" style="margin-bottom:16px"></div>
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+          <div class="card-title" style="margin:0">订单列表</div>
+          <input type="text" id="order-search" placeholder="搜索订单号、客户…" style="width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px" oninput="renderOrders()">
+          <select id="order-status-filter" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="renderOrders()">
+            <option value="">全部状态</option>
+            <option value="pending">待付定金</option>
+            <option value="producing">生产中</option>
+            <option value="shipped">已发货</option>
+            <option value="completed">已完成</option>
+            <option value="cancelled">已取消</option>
+          </select>
+          <button class="btn btn-primary" style="margin-left:auto" onclick="openOrderModal()">+ 新建订单</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>订单号</th><th>客户</th><th>金额</th><th>收款进度</th><th>状态</th><th>预计交期</th><th>操作</th></tr>
+            </thead>
+            <tbody id="orders-tbody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -838,6 +887,69 @@
         </div>
       </div>
 
+      <!-- 单据外观与签章 -->
+      <div class="card" style="max-width:600px;margin-top:20px">
+        <div class="card-title">单据外观与签章</div>
+        <div class="alert alert-info">以下设置作用于「报价单 / 形式发票 PI / 装箱单」的 PDF 导出。修改后点击下方「保存外观设置」。</div>
+        <div class="form-grid">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>单据样式模板</label>
+            <select id="s-doc-style">
+              <option value="classic">经典商务蓝 — 稳重专业，色块抬头（推荐）</option>
+              <option value="minimal">极简黑白 — 留白细线，高级克制</option>
+              <option value="modern">现代强调色 — 顶部彩条，圆角卡片</option>
+            </select>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:5px">样式可与下方主题色、Logo、签章自由搭配。预览可参考 <strong>单据样式预览.html</strong>。</div>
+          </div>
+          <div class="form-group">
+            <label>公司 Logo</label>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div id="s-logo-preview" style="width:54px;height:54px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-secondary);overflow:hidden;background:#fff">无</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <button class="btn btn-outline btn-sm" onclick="document.getElementById('s-logo-input').click()">上传</button>
+                <button class="btn btn-ghost btn-sm" onclick="clearDocImage('logo')">清除</button>
+              </div>
+            </div>
+            <input type="file" id="s-logo-input" accept="image/*" style="display:none" onchange="handleDocImage(this,'logo')">
+          </div>
+          <div class="form-group">
+            <label>电子章 / 签名图（建议透明 PNG）</label>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div id="s-stamp-preview" style="width:54px;height:54px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-secondary);overflow:hidden;background:#fff">无</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <button class="btn btn-outline btn-sm" onclick="document.getElementById('s-stamp-input').click()">上传</button>
+                <button class="btn btn-ghost btn-sm" onclick="clearDocImage('stamp')">清除</button>
+              </div>
+            </div>
+            <input type="file" id="s-stamp-input" accept="image/*" style="display:none" onchange="handleDocImage(this,'stamp')">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>主题色（单据抬头 / 表头 / 合计 / 页脚）</label>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <div id="s-color-swatches" style="display:flex;gap:8px"></div>
+              <input type="color" id="s-doc-color" value="#1d4ed8" style="width:46px;height:32px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer">
+              <span style="font-size:12px;color:var(--text-secondary)">点色块快速选择，或用右侧取色器自定义</span>
+            </div>
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>签字人姓名（显示在签字栏下方）</label>
+            <input type="text" id="s-signatory" placeholder="如：张经理 / Sales Manager">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>单据显示项</label>
+            <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin-top:4px">
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer"><input type="checkbox" id="s-show-bank" checked> 银行信息</label>
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer"><input type="checkbox" id="s-show-payment" checked> 付款摘要 (PI)</label>
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer"><input type="checkbox" id="s-show-remarks" checked> 备注</label>
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer"><input type="checkbox" id="s-show-grosscbm" checked> 毛重 / CBM (装箱单)</label>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <button class="btn btn-primary" onclick="saveSettings()">保存外观设置</button>
+        </div>
+      </div>
+
       <!-- 数据备份与恢复 -->
       <div class="card" style="max-width:600px;margin-top:20px">
         <div class="card-title">数据备份与恢复</div>
@@ -876,7 +988,7 @@
         <div class="card">
           <div class="table-wrapper">
             <table>
-              <thead><tr><th>公司 / 联系人</th><th>国家</th><th>阶段</th><th>下次跟进</th><th>来源</th><th>操作</th></tr></thead>
+              <thead><tr><th>公司 / 联系人</th><th>国家</th><th>当地时间</th><th>阶段</th><th>下次跟进</th><th>来源</th><th>操作</th></tr></thead>
               <tbody id="customer-list-tbody"></tbody>
             </table>
           </div>
@@ -884,6 +996,118 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- Order Modal -->
+<div class="modal-overlay" id="order-modal">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-header">
+      <h3 id="order-modal-title">新建订单</h3>
+      <button class="modal-close" onclick="closeModal('order-modal')">&times;</button>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>订单号</label>
+        <input type="text" id="om-number" placeholder="SO-250101-001">
+      </div>
+      <div class="form-group">
+        <label>订单状态</label>
+        <select id="om-status">
+          <option value="pending">待付定金</option>
+          <option value="producing">生产中</option>
+          <option value="shipped">已发货</option>
+          <option value="completed">已完成</option>
+          <option value="cancelled">已取消</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>从已有客户选择（也可在下方自定义编辑）</label>
+        <select id="om-customer-select" onchange="applyOrderCustomer()">
+          <option value="">— 自定义填写 —</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>客户公司名</label>
+        <input type="text" id="om-buyer-name" placeholder="Company Name">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>客户地址</label>
+        <input type="text" id="om-buyer-addr" placeholder="Address, City, Country">
+      </div>
+      <div class="form-group">
+        <label>联系人</label>
+        <input type="text" id="om-buyer-contact" placeholder="Contact Person">
+      </div>
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="text" id="om-buyer-email" placeholder="email@example.com">
+      </div>
+      <div class="form-group">
+        <label>下单日期</label>
+        <input type="date" id="om-date">
+      </div>
+      <div class="form-group">
+        <label>预计交货日期</label>
+        <input type="date" id="om-delivery">
+      </div>
+      <div class="form-group">
+        <label>币种</label>
+        <select id="om-currency" onchange="renderOrderItems()">
+          <option value="USD">USD 美元</option><option value="EUR">EUR 欧元</option>
+          <option value="GBP">GBP 英镑</option><option value="JPY">JPY 日元</option>
+          <option value="AUD">AUD 澳元</option><option value="CAD">CAD 加元</option>
+          <option value="HKD">HKD 港元</option><option value="SGD">SGD 新元</option>
+          <option value="CNY">CNY 人民币</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>贸易条款</label>
+        <select id="om-incoterm">
+          <option value="EXW">EXW 出厂价</option><option value="FOB" selected>FOB 离岸价</option>
+          <option value="CFR">CFR 成本加运费</option><option value="CIF">CIF 到岸价</option>
+          <option value="DAP">DAP 目的地交货</option><option value="DDP">DDP 完税后交货</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>付款方式</label>
+        <input type="text" id="om-payment" placeholder="如：T/T 30% 定金，发货前付清余款">
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:8px;box-shadow:none;border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="card-title" style="margin:0">订单产品</div>
+        <button class="btn btn-outline btn-sm" onclick="openProductPicker('order')">+ 从库存选择</button>
+      </div>
+      <div id="order-items-list"></div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px;width:100%" onclick="addOrderItemRow()">+ 手动添加行</button>
+    </div>
+
+    <div class="form-grid" style="margin-top:8px">
+      <div class="form-group">
+        <label>订单总额（自动计算）</label>
+        <input type="text" id="om-total" readonly style="background:var(--bg);font-weight:600">
+      </div>
+      <div class="form-group">
+        <label>已收款金额</label>
+        <input type="number" id="om-deposit" placeholder="0.00" step="0.01" min="0" oninput="updateOrderTotals()">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>待收尾款</label>
+        <input type="text" id="om-balance" readonly style="background:var(--bg);font-weight:600">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>订单备注</label>
+        <textarea id="om-notes" placeholder="生产要求、唛头、物流安排等…"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('order-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveOrder()">保存订单</button>
+    </div>
   </div>
 </div>
 
@@ -1228,15 +1452,29 @@
 // ═══════════════════════════════════════
 //  LIVE EXCHANGE RATES
 // ═══════════════════════════════════════
-const RATE_CURRENCIES = ['USD','EUR','GBP','JPY','AUD','CAD','HKD','SGD'];
+const RATE_CURRENCIES = [
+  'USD','EUR','GBP','JPY','AUD','CAD','HKD','SGD',
+  'AED','SAR','QAR','KWD','BHD','OMR','ILS','TRY',      // 中东
+  'ZAR','EGP','NGN','KES','GHS','MAD'                   // 非洲
+];
 const CURRENCY_NAMES = {
   USD:'美元', EUR:'欧元', GBP:'英镑', JPY:'日元',
-  AUD:'澳元', CAD:'加元', HKD:'港元', SGD:'新加坡元'
+  AUD:'澳元', CAD:'加元', HKD:'港元', SGD:'新加坡元',
+  AED:'阿联酋迪拉姆', SAR:'沙特里亚尔', QAR:'卡塔尔里亚尔', KWD:'科威特第纳尔',
+  BHD:'巴林第纳尔', OMR:'阿曼里亚尔', ILS:'以色列谢克尔', TRY:'土耳其里拉',
+  ZAR:'南非兰特', EGP:'埃及镑', NGN:'尼日利亚奈拉', KES:'肯尼亚先令',
+  GHS:'加纳塞地', MAD:'摩洛哥迪拉姆'
 };
 const CHART_COLORS = {
   USD:'#1a73e8', EUR:'#ea4335', GBP:'#34a853', JPY:'#f29900',
-  AUD:'#9c27b0', CAD:'#ff6d00', HKD:'#00897b', SGD:'#795548'
+  AUD:'#9c27b0', CAD:'#ff6d00', HKD:'#00897b', SGD:'#795548',
+  AED:'#0277bd', SAR:'#2e7d32', QAR:'#6a1b9a', KWD:'#ad1457',
+  BHD:'#00838f', OMR:'#4e342e', ILS:'#1565c0', TRY:'#d84315',
+  ZAR:'#558b2f', EGP:'#c62828', NGN:'#00695c', KES:'#827717',
+  GHS:'#ef6c00', MAD:'#5d4037'
 };
+let ratePage = 0;
+const RATE_PAGE_SIZE = 8;
 
 let liveRates   = {};   // { USD: 7.2541, ... }
 let prevRates   = {};   // yesterday's rates
@@ -1314,7 +1552,12 @@ function renderRateCards() {
   const grid = document.getElementById('rate-cards-grid');
   if (!grid) return;
 
-  grid.innerHTML = RATE_CURRENCIES.map(cur => {
+  const totalPages = Math.max(1, Math.ceil(RATE_CURRENCIES.length / RATE_PAGE_SIZE));
+  if (ratePage > totalPages-1) ratePage = totalPages-1;
+  if (ratePage < 0) ratePage = 0;
+  const pageCurrencies = RATE_CURRENCIES.slice(ratePage*RATE_PAGE_SIZE, ratePage*RATE_PAGE_SIZE + RATE_PAGE_SIZE);
+
+  grid.innerHTML = pageCurrencies.map(cur => {
     const rate = liveRates[cur];
     const name = CURRENCY_NAMES[cur] || cur;
     const dot  = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CHART_COLORS[cur]};margin-right:5px;vertical-align:middle"></span>`;
@@ -1351,6 +1594,25 @@ function renderRateCards() {
   const t = document.getElementById('rate-update-time');
   if (t && rateUpdateTime)
     t.textContent = '更新时间: ' + rateUpdateTime.toLocaleTimeString('zh-CN');
+
+  renderRatePager(totalPages);
+}
+
+function renderRatePager(totalPages) {
+  const el = document.getElementById('rate-pager');
+  if (!el) return;
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+  const btn = (label, disabled, delta) =>
+    `<button onclick="ratePageGo(${delta})" ${disabled?'disabled':''}
+      style="border:1px solid var(--border);background:#fff;border-radius:6px;width:24px;height:24px;cursor:${disabled?'default':'pointer'};color:${disabled?'#ccc':'var(--text)'};font-size:13px;line-height:1">${label}</button>`;
+  el.innerHTML = `${btn('‹', ratePage===0, -1)}
+    <span style="font-size:12px;color:var(--text-secondary);min-width:34px;text-align:center">${ratePage+1} / ${totalPages}</span>
+    ${btn('›', ratePage===totalPages-1, 1)}`;
+}
+
+function ratePageGo(delta) {
+  ratePage += delta;
+  renderRateCards();
 }
 
 /* ── 7日折线图 ── */
@@ -1442,6 +1704,15 @@ function toggleChartCur(cur) {
   if (chartVisible.has(cur)) chartVisible.delete(cur);
   else chartVisible.add(cur);
   renderRateChart();
+}
+
+function toggleChartPicker() {
+  const panel = document.getElementById('rate-chart-toggles');
+  const btn = document.getElementById('chart-picker-btn');
+  if (!panel) return;
+  const open = panel.style.display !== 'none' && panel.style.display !== '';
+  panel.style.display = open ? 'none' : 'flex';
+  if (btn) btn.textContent = open ? '选择币种 ▾' : '收起 ▴';
 }
 
 // ── Currency helpers ──
@@ -1599,6 +1870,7 @@ let state = {
   quotes: [],
   quoteItems: [],
   customers: [],
+  orders: [],
   settings: {},
   editingProductId: null
 };
@@ -1614,6 +1886,7 @@ function load() {
   if (!state.quotes)     state.quotes = [];
   if (!state.quoteItems) state.quoteItems = [];
   if (!state.customers)  state.customers = [];
+  if (!state.orders)     state.orders = [];
 }
 
 function save() {
@@ -1624,18 +1897,19 @@ function save() {
 // ═══════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════
-const pageTitles = { dashboard:'总览', inventory:'库存管理', profit:'利润测算', quote:'报价单', customers:'客户管理', settings:'公司设置' };
+const pageTitles = { dashboard:'总览', inventory:'库存管理', profit:'利润测算', quote:'报价单', orders:'订单管理', customers:'客户管理', settings:'公司设置' };
 
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item')[['dashboard','inventory','profit','quote','customers','settings'].indexOf(name)].classList.add('active');
+  document.querySelectorAll('.nav-item')[['dashboard','inventory','profit','quote','orders','customers','settings'].indexOf(name)].classList.add('active');
   document.getElementById('page-title').textContent = pageTitles[name];
   if (name === 'dashboard') renderDashboard();
   if (name === 'inventory') renderInventory();
   if (name === 'profit') { renderCalcProducts(); updateCalcLabels(); }
   if (name === 'quote') { renderQuoteItems(); renderQuoteHistory(); initQuoteDefaults(); renderQuoteCustomerOptions(); }
+  if (name === 'orders') renderOrders();
   if (name === 'customers') renderCustomers();
   if (name === 'settings') loadSettings();
 }
@@ -1654,12 +1928,15 @@ function renderDashboard() {
   const totalVal = state.products.reduce((s,p) => s + p.stock * p.cost, 0);
   const lowStock = state.products.filter(p => p.stock <= (p.minStock || 10) && p.stock > 0);
   const noStock = state.products.filter(p => p.stock === 0);
+  const orders = state.orders || [];
+  const activeOrders = orders.filter(o => o.status!=='completed' && o.status!=='cancelled').length;
 
   document.getElementById('dashboard-stats').innerHTML = `
     <div class="stat-card"><div class="stat-label">产品种类</div><div class="stat-value text-primary">${state.products.length}</div><div class="stat-sub">种产品</div></div>
     <div class="stat-card"><div class="stat-label">总库存量</div><div class="stat-value">${total.toLocaleString()}</div><div class="stat-sub">件</div></div>
     <div class="stat-card"><div class="stat-label">库存总价值</div><div class="stat-value text-success">¥${totalVal.toLocaleString('zh',{minimumFractionDigits:0,maximumFractionDigits:0})}</div><div class="stat-sub">按采购价计算</div></div>
     <div class="stat-card"><div class="stat-label">报价单数</div><div class="stat-value text-primary">${state.quotes.length}</div><div class="stat-sub">历史报价</div></div>
+    <div class="stat-card"><div class="stat-label">进行中订单</div><div class="stat-value text-warning">${activeOrders}</div><div class="stat-sub">共 ${orders.length} 笔</div></div>
     <div class="stat-card"><div class="stat-label">库存预警</div><div class="stat-value text-warning">${lowStock.length}</div><div class="stat-sub">款低库存</div></div>
     <div class="stat-card"><div class="stat-label">缺货</div><div class="stat-value text-danger">${noStock.length}</div><div class="stat-sub">款零库存</div></div>
   `;
@@ -1688,6 +1965,41 @@ function renderDashboard() {
       </div>
     `).join('');
   }
+
+  renderFollowupCard();
+}
+
+// 仪表盘右侧「客户跟进提醒」信息卡片（含客户当地时间）
+function renderFollowupCard() {
+  const el = document.getElementById('followup-card');
+  if (!el) return;
+  const now = new Date();
+  const withDate = (state.customers||[])
+    .filter(c => c.nextFollowup && c.stage !== 'closed' && c.stage !== 'hold')
+    .map(c => ({ c, days: Math.round((new Date(c.nextFollowup) - now) / 86400000) }))
+    .filter(x => x.days <= 7)
+    .sort((a,b) => a.days - b.days);
+
+  if (withDate.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:26px;color:var(--text-secondary);font-size:13px">近期暂无待跟进客户<br><span style="font-size:11px">在客户资料里设置「下次跟进日期」即可在此提醒</span></div>';
+    return;
+  }
+  const rows = withDate.slice(0,6).map(({c}) => {
+    const lt = customerLocalTime(c.country);
+    const ltHtml = lt
+      ? `🕐 <span class="cust-clock" data-tz="${lt.tz}" style="font-weight:600;color:${lt.working?'var(--success)':'var(--text-secondary)'}">${lt.timeStr}</span>`
+      : '';
+    return `<div onclick="openCustomerDetail('${c.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">
+      <div style="min-width:0">
+        <div style="font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${countryFlag(c.country)} ${escHtml(c.company)}</div>
+        <div style="font-size:11px;color:var(--text-secondary)">${escHtml(c.contact||'—')}　${ltHtml}</div>
+      </div>
+      <div style="flex-shrink:0">${followupBadge(c.nextFollowup)}</div>
+    </div>`;
+  }).join('');
+  const more = withDate.length > 6
+    ? `<div style="text-align:center;font-size:11px;color:var(--text-secondary);padding-top:8px">还有 ${withDate.length-6} 位待跟进…</div>` : '';
+  el.innerHTML = rows + more;
 }
 
 // ═══════════════════════════════════════
@@ -2112,7 +2424,7 @@ function renderQuoteItems() {
         <span style="font-size:12px;color:var(--text-secondary);font-weight:600">产品 ${i+1}</span>
         <button class="btn btn-sm" style="background:#fce8e6;color:var(--danger);padding:2px 8px" onclick="removeQuoteItem('${item.id}')">✕</button>
       </div>
-      <div class="form-grid" style="grid-template-columns:2fr 1fr 1fr 1fr">
+      <div class="form-grid" style="grid-template-columns:2fr 0.9fr 0.8fr 1.3fr">
         <div class="form-group">
           <label>产品名称</label>
           <input type="text" value="${escHtml(item.name)}" onchange="updateQuoteItem('${item.id}','name',this.value)" placeholder="Product Name">
@@ -2123,7 +2435,7 @@ function renderQuoteItems() {
         </div>
         <div class="form-group">
           <label>单位</label>
-          <input type="text" value="${escHtml(item.unit)}" onchange="updateQuoteItem('${item.id}','unit',this.value)">
+          <select onchange="updateQuoteItem('${item.id}','unit',this.value)">${buildUnitOptions(item.unit)}</select>
         </div>
         <div class="form-group">
           <label>单价 (外币)</label>
@@ -2153,7 +2465,9 @@ function removeQuoteItem(id) {
 
 function getCurrency() { return document.getElementById('q-currency').value || 'USD'; }
 
-function openProductPicker() {
+let _pickerTarget = 'quote';
+function openProductPicker(target) {
+  _pickerTarget = target || 'quote';
   renderPicker();
   document.getElementById('picker-modal').classList.add('show');
 }
@@ -2179,7 +2493,7 @@ function renderPicker() {
 
 function pickProduct(id) {
   const p = state.products.find(x => x.id === id);
-  if (p) addQuoteItemRow(p);
+  if (p) { if (_pickerTarget === 'order') addOrderItemRow(p); else addQuoteItemRow(p); }
   closeModal('picker-modal');
 }
 
@@ -2391,109 +2705,58 @@ function exportQuotePDF() {
   const { jsPDF } = window.jspdf;
   if (!jsPDF) { alert('PDF库加载失败，请检查网络连接'); return; }
   const q = buildQuoteData();
+  const t = docTheme();
+  const seller = q.seller;
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-
   const pageW = 210, margin = 16;
-  let y = margin;
 
-  // Header
-  doc.setFillColor(26, 115, 232);
-  doc.rect(0, 0, pageW, 28, 'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(16); doc.setFont(undefined,'bold');
-  doc.text(q.seller.nameEn, margin, 13);
-  doc.setFontSize(8); doc.setFont(undefined,'normal');
-  if (q.seller.addr) doc.text(q.seller.addr, margin, 19);
-  const contact = [q.seller.tel, q.seller.email, q.seller.web].filter(Boolean).join('  |  ');
-  if (contact) doc.text(contact, margin, 24);
+  pdfDocHeader(doc, seller, 'QUOTATION', q.number, q.date, t);
 
-  // Quote number top right
-  doc.setFontSize(10); doc.setFont(undefined,'bold');
-  doc.text('QUOTATION', pageW - margin, 12, {align:'right'});
-  doc.setFontSize(8); doc.setFont(undefined,'normal');
-  doc.text(`No.: ${q.number}`, pageW - margin, 18, {align:'right'});
-  doc.text(`Date: ${q.date}`, pageW - margin, 23, {align:'right'});
-
-  y = 36;
-  doc.setTextColor(0,0,0);
-
-  // Buyer & Terms boxes
-  doc.setFillColor(248,249,250);
-  doc.rect(margin, y, (pageW-margin*2)/2-4, 30, 'F');
-  doc.rect((pageW+margin*2)/2-4+4, y, (pageW-margin*2)/2-4, 30, 'F');
-  doc.setFontSize(8); doc.setFont(undefined,'bold');
-  doc.text('TO:', margin+3, y+6);
-  doc.setFont(undefined,'normal');
-  doc.text(q.buyer.name || '—', margin+3, y+11);
-  doc.text(q.buyer.addr || '', margin+3, y+16, {maxWidth: (pageW-margin*2)/2-8});
-  doc.text([q.buyer.contact, q.buyer.email].filter(Boolean).join('  '), margin+3, y+24, {maxWidth:(pageW-margin*2)/2-8});
-
-  const rx = (pageW+margin*2)/2;
-  doc.setFont(undefined,'bold'); doc.text('Terms:', rx+3, y+6);
-  doc.setFont(undefined,'normal');
-  doc.text(`Incoterm: ${q.incoterm}`, rx+3, y+11);
-  doc.text(`Payment: ${q.payment}`, rx+3, y+16);
-  doc.text(`Currency: ${q.currency}`, rx+3, y+21);
-  doc.text(`Valid Until: ${q.valid}`, rx+3, y+26);
-
+  let y = 36;
+  drawInfoBoxes(doc, y, t, q.buyer, [['Incoterm',q.incoterm],['Payment',q.payment],['Currency',q.currency],['Valid Until',q.valid]]);
   y += 36;
 
-  // Items table
-  const tableBody = q.items.map(item => [
-    item.name,
-    item.spec || '',
-    item.qty,
-    item.unit,
+  const tableBody = q.items.map((item,i) => [
+    i+1, item.name, item.spec || '', item.qty, item.unit,
     `${q.currency} ${(+item.price).toFixed(2)}`,
     `${q.currency} ${((+item.qty)*(+item.price)).toFixed(2)}`
   ]);
-
-  doc.autoTable({
-    startY: y,
-    margin: { left: margin, right: margin },
-    head: [['Description', 'Specification', 'Qty', 'Unit', 'Unit Price', 'Amount']],
-    body: tableBody,
-    foot: [[{ content: 'TOTAL', colSpan: 5, styles: { halign:'right', fontStyle:'bold' } }, `${q.currency} ${q.total.toFixed(2)}`]],
-    styles: { fontSize: 8, cellPadding: 3 },
-    headStyles: { fillColor: [26,115,232], textColor:[255,255,255], fontStyle:'bold' },
-    footStyles: { fillColor:[232,240,254], textColor:[26,115,232], fontStyle:'bold' },
-    columnStyles: { 2:{halign:'center'}, 3:{halign:'center'}, 4:{halign:'right'}, 5:{halign:'right'} },
-  });
-
+  doc.autoTable(docTableOpts(t, y,
+    [['#','Description','Specification','Qty','Unit','Unit Price','Amount']], tableBody, null,
+    { 0:{halign:'center',cellWidth:8}, 3:{halign:'center'}, 4:{halign:'center'}, 5:{halign:'right'}, 6:{halign:'right'} }
+  ));
   y = doc.lastAutoTable.finalY + 8;
 
-  // Remarks & Terms
-  doc.setFontSize(8);
-  if (q.remarks) {
+  y = drawTotalsBox(doc, y, t, [], 'TOTAL', `${q.currency} ${q.total.toFixed(2)}`);
+  y += 8;
+
+  doc.setFontSize(8); doc.setTextColor(0,0,0);
+  if (q.remarks && t.show.remarks) {
     doc.setFont(undefined,'bold'); doc.text('Remarks:', margin, y); y += 5;
     doc.setFont(undefined,'normal'); doc.text(q.remarks, margin, y, {maxWidth: pageW-margin*2}); y += 10;
   }
   if (q.terms) {
     doc.setFont(undefined,'bold'); doc.text('Terms & Conditions:', margin, y); y += 5;
     doc.setFont(undefined,'normal');
-    const lines = q.terms.split('\n');
-    lines.forEach(line => { doc.text(line, margin, y, {maxWidth: pageW-margin*2}); y += 5; });
+    q.terms.split('\n').forEach(line => { doc.text(line, margin, y, {maxWidth: pageW-margin*2}); y += 5; });
     y += 2;
   }
-  if (q.seller.bank) {
+  if (q.seller.bank && t.show.bank) {
     doc.setFont(undefined,'bold'); doc.text('Banking Details:', margin, y); y += 5;
     doc.setFont(undefined,'normal');
-    doc.text(`${q.seller.bank}  |  ${q.seller.swift}`, margin, y);
+    doc.text(`${q.seller.bank}  |  ${q.seller.swift}`, margin, y); y += 10;
   }
+  drawDocSignature(doc, Math.max(y+2, 228), t);
 
-  // Footer
-  const pageH = 297;
-  doc.setFillColor(26,115,232);
-  doc.rect(0, pageH-10, pageW, 10, 'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(7);
-  doc.text(`Generated by 鱼市Pro  ·  ${q.seller.email}  ·  ${q.seller.web}`, pageW/2, pageH-4, {align:'center'});
-
+  pdfDocFooter(doc, seller, t);
   doc.save(`Quotation_${q.number}_${q.buyer.name||'Client'}.pdf`);
 }
 
 // ═══════════════════════════════════════
 //  SETTINGS
 // ═══════════════════════════════════════
+const DOC_COLOR_PRESETS = ['#1d4ed8','#1e3a5f','#0f766e','#9d174d','#c2410c','#334155'];
+
 function loadSettings() {
   const s = state.settings;
   document.getElementById('s-company-cn').value = s.companyCn || '';
@@ -2504,10 +2767,31 @@ function loadSettings() {
   document.getElementById('s-web').value = s.web || '';
   document.getElementById('s-bank').value = s.bank || '';
   document.getElementById('s-swift').value = s.swift || '';
+  // 单据外观
+  document.getElementById('s-doc-style').value = s.docStyle || 'classic';
+  document.getElementById('s-doc-color').value = s.docColor || '#1d4ed8';
+  document.getElementById('s-signatory').value = s.signatory || '';
+  const sh = s.docShow || {};
+  document.getElementById('s-show-bank').checked     = sh.bank!==false;
+  document.getElementById('s-show-payment').checked  = sh.payment!==false;
+  document.getElementById('s-show-remarks').checked  = sh.remarks!==false;
+  document.getElementById('s-show-grosscbm').checked = sh.grossCbm!==false;
+  renderColorSwatches();
+  renderDocImagePreview('logo');
+  renderDocImagePreview('stamp');
+}
+
+function renderColorSwatches() {
+  const el = document.getElementById('s-color-swatches');
+  if (!el) return;
+  el.innerHTML = DOC_COLOR_PRESETS.map(c =>
+    `<span onclick="document.getElementById('s-doc-color').value='${c}'" title="${c}" style="width:24px;height:24px;border-radius:6px;background:${c};cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px var(--border)"></span>`
+  ).join('');
 }
 
 function saveSettings() {
   state.settings = {
+    ...state.settings,
     companyCn: document.getElementById('s-company-cn').value,
     companyEn: document.getElementById('s-company-en').value,
     addr: document.getElementById('s-addr').value,
@@ -2516,9 +2800,59 @@ function saveSettings() {
     web: document.getElementById('s-web').value,
     bank: document.getElementById('s-bank').value,
     swift: document.getElementById('s-swift').value,
+    docStyle: document.getElementById('s-doc-style').value || 'classic',
+    docColor: document.getElementById('s-doc-color').value || '#1d4ed8',
+    signatory: document.getElementById('s-signatory').value.trim(),
+    docShow: {
+      bank:     document.getElementById('s-show-bank').checked,
+      payment:  document.getElementById('s-show-payment').checked,
+      remarks:  document.getElementById('s-show-remarks').checked,
+      grossCbm: document.getElementById('s-show-grosscbm').checked,
+    },
   };
   save();
   alert('设置已保存');
+}
+
+// 单据 Logo / 电子章上传（统一转 PNG 以保留透明背景，并记录宽高比）
+function handleDocImage(input, key) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = key === 'logo' ? 260 : 320;
+      const scale = Math.min(1, maxW / img.width);
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * scale);
+      cv.height = Math.round(img.height * scale);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      state.settings[key] = cv.toDataURL('image/png');
+      state.settings[key+'Ratio'] = img.width / img.height;
+      save();
+      renderDocImagePreview(key);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function clearDocImage(key) {
+  delete state.settings[key];
+  delete state.settings[key+'Ratio'];
+  save();
+  renderDocImagePreview(key);
+}
+
+function renderDocImagePreview(key) {
+  const el = document.getElementById('s-'+key+'-preview');
+  if (!el) return;
+  const data = (state.settings||{})[key];
+  el.innerHTML = data
+    ? `<img src="${data}" style="max-width:100%;max-height:100%;object-fit:contain">`
+    : '无';
 }
 
 // ═══════════════════════════════════════
@@ -2536,6 +2870,7 @@ function exportData() {
       quotes:     state.quotes     || [],
       quoteItems: state.quoteItems || [],
       customers:  state.customers  || [],
+      orders:     state.orders     || [],
       settings:   state.settings   || {},
     }
   };
@@ -2572,7 +2907,7 @@ function importData(input) {
       input.value = '';
       return;
     }
-    const counts = `产品 ${(d.products||[]).length} 条、报价 ${(d.quotes||[]).length} 条、客户 ${(d.customers||[]).length} 条`;
+    const counts = `产品 ${(d.products||[]).length} 条、报价 ${(d.quotes||[]).length} 条、订单 ${(d.orders||[]).length} 条、客户 ${(d.customers||[]).length} 条`;
     if (!confirm(`确定要导入吗？\n\n将用备份文件（${counts}）覆盖当前账号的全部数据，此操作不可撤销。`)) {
       input.value = '';
       return;
@@ -2581,6 +2916,7 @@ function importData(input) {
     state.quotes     = Array.isArray(d.quotes)     ? d.quotes     : [];
     state.quoteItems = Array.isArray(d.quoteItems) ? d.quoteItems : [];
     state.customers  = Array.isArray(d.customers)  ? d.customers  : [];
+    state.orders     = Array.isArray(d.orders)     ? d.orders     : [];
     state.settings   = (d.settings && typeof d.settings === 'object') ? d.settings : {};
     state.editingProductId = null;
     save();
@@ -2783,6 +3119,604 @@ document.addEventListener('click', e => {
 });
 
 // ═══════════════════════════════════════
+//  ORDER MANAGEMENT
+// ═══════════════════════════════════════
+const ORDER_STATUS = {
+  pending:   { label:'待付定金', cls:'badge-info' },
+  producing: { label:'生产中',   cls:'badge-warning' },
+  shipped:   { label:'已发货',   cls:'badge-info' },
+  completed: { label:'已完成',   cls:'badge-success' },
+  cancelled: { label:'已取消',   cls:'badge-danger' },
+};
+let editingOrderId = null;
+let orderItems = [];
+
+// 与库存管理「单位」保持一致的预设单位
+const UNIT_OPTIONS = ['PCS','SET','BOX','CTN','KG','M','M²','套','个'];
+function buildUnitOptions(current) {
+  const opts = UNIT_OPTIONS.includes(current) || !current ? UNIT_OPTIONS : [current, ...UNIT_OPTIONS];
+  return opts.map(u => `<option value="${escHtml(u)}"${u===current?' selected':''}>${escHtml(u)}</option>`).join('');
+}
+
+function renderOrders() {
+  renderOrderStats();
+  const tbody = document.getElementById('orders-tbody');
+  if (!tbody) return;
+  const kw = (document.getElementById('order-search')?.value || '').toLowerCase();
+  const sf = document.getElementById('order-status-filter')?.value || '';
+  let list = (state.orders || []).filter(o => {
+    const matchKw = !kw || (o.number||'').toLowerCase().includes(kw) || (o.buyer?.name||'').toLowerCase().includes(kw);
+    const matchSf = !sf || o.status === sf;
+    return matchKw && matchSf;
+  });
+  list = [...list].reverse();
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty" style="text-align:center;padding:28px;color:var(--text-secondary);font-size:13px">暂无订单。可在此「新建订单」，或在报价单页面「转为订单」。</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(o => {
+    const st = ORDER_STATUS[o.status] || ORDER_STATUS.pending;
+    const sym = currSym(o.currency);
+    const total = o.total || 0, dep = o.deposit || 0;
+    const pct = total > 0 ? Math.min(100, Math.round(dep / total * 100)) : 0;
+    const statusOpts = Object.keys(ORDER_STATUS).map(k =>
+      `<option value="${k}"${k===o.status?' selected':''}>${ORDER_STATUS[k].label}</option>`).join('');
+    return `
+      <tr>
+        <td><strong>${escHtml(o.number)}</strong>${o.fromQuote?`<div style="font-size:11px;color:var(--text-secondary)">源自 ${escHtml(o.fromQuote)}</div>`:''}</td>
+        <td>${escHtml(o.buyer?.name||'—')}</td>
+        <td>${sym}${total.toFixed(2)} ${escHtml(o.currency||'')}</td>
+        <td style="min-width:130px">
+          <div style="font-size:12px;margin-bottom:3px">已收 ${sym}${dep.toFixed(2)} · 待收 ${sym}${Math.max(0,total-dep).toFixed(2)}</div>
+          <div style="height:6px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${pct>=100?'var(--success)':'var(--primary)'}"></div></div>
+        </td>
+        <td>
+          <select onchange="updateOrderStatus('${o.id}',this.value)" class="badge ${st.cls}" style="border:none;font-weight:600;cursor:pointer;padding:3px 6px">${statusOpts}</select>
+        </td>
+        <td>${o.delivery ? escHtml(o.delivery) : '<span style="color:var(--text-secondary)">—</span>'}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-ghost btn-sm" title="导出形式发票 PI" onclick="exportOrderPI('${o.id}')">PI</button>
+          <button class="btn btn-ghost btn-sm" title="导出装箱单" onclick="exportOrderPackingList('${o.id}')">装箱单</button>
+          <button class="btn btn-outline btn-sm" style="margin-left:4px" onclick="openOrderModal('${o.id}')">编辑</button>
+          <button class="btn btn-sm" style="background:#fce8e6;color:var(--danger);margin-left:4px" onclick="deleteOrder('${o.id}')">删除</button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function renderOrderStats() {
+  const el = document.getElementById('orders-stats');
+  if (!el) return;
+  const orders = state.orders || [];
+  const active = orders.filter(o => o.status!=='completed' && o.status!=='cancelled');
+  const inProgress = active.length;
+  const completed = orders.filter(o => o.status==='completed').length;
+  const pendingPay = active.filter(o => (o.deposit||0) < (o.total||0)).length;
+  el.innerHTML = `
+    <div class="stat-card"><div class="stat-label">订单总数</div><div class="stat-value text-primary">${orders.length}</div><div class="stat-sub">笔订单</div></div>
+    <div class="stat-card"><div class="stat-label">进行中</div><div class="stat-value text-warning">${inProgress}</div><div class="stat-sub">笔未完成</div></div>
+    <div class="stat-card"><div class="stat-label">已完成</div><div class="stat-value text-success">${completed}</div><div class="stat-sub">笔成交</div></div>
+    <div class="stat-card"><div class="stat-label">待收尾款</div><div class="stat-value text-danger">${pendingPay}</div><div class="stat-sub">笔未结清</div></div>
+  `;
+}
+
+function renderOrderCustomerOptions() {
+  const sel = document.getElementById('om-customer-select');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = ['<option value="">— 自定义填写 —</option>']
+    .concat((state.customers||[]).map(c =>
+      `<option value="${c.id}">${escHtml(c.company)}${c.country?` (${escHtml(countryName(c.country))})`:''}</option>`)).join('');
+  if (prev && (state.customers||[]).some(c=>c.id===prev)) sel.value = prev;
+}
+
+function applyOrderCustomer() {
+  const id = document.getElementById('om-customer-select').value;
+  if (!id) return;
+  const c = (state.customers||[]).find(x=>x.id===id);
+  if (!c) return;
+  document.getElementById('om-buyer-name').value    = c.company || '';
+  document.getElementById('om-buyer-addr').value    = c.address || '';
+  document.getElementById('om-buyer-contact').value = c.contact || '';
+  document.getElementById('om-buyer-email').value   = c.email || '';
+  if (c.currency) document.getElementById('om-currency').value = c.currency;
+  updateOrderTotals();
+}
+
+function genOrderNumber() {
+  const d = new Date().toISOString().split('T')[0].replace(/-/g,'').slice(2);
+  return 'SO-' + d + '-' + String((state.orders||[]).length + 1).padStart(3,'0');
+}
+
+function openOrderModal(id, prefill) {
+  editingOrderId = id || null;
+  orderItems = [];
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('order-modal-title').textContent = id ? '编辑订单' : '新建订单';
+
+  if (id) {
+    const o = (state.orders||[]).find(x=>x.id===id);
+    if (!o) return;
+    document.getElementById('om-number').value  = o.number || '';
+    document.getElementById('om-status').value  = o.status || 'pending';
+    document.getElementById('om-buyer-name').value    = o.buyer?.name || '';
+    document.getElementById('om-buyer-addr').value    = o.buyer?.addr || '';
+    document.getElementById('om-buyer-contact').value = o.buyer?.contact || '';
+    document.getElementById('om-buyer-email').value   = o.buyer?.email || '';
+    document.getElementById('om-date').value     = o.date || today;
+    document.getElementById('om-delivery').value = o.delivery || '';
+    document.getElementById('om-currency').value = o.currency || 'USD';
+    document.getElementById('om-incoterm').value = o.incoterm || 'FOB';
+    document.getElementById('om-payment').value  = o.payment || '';
+    document.getElementById('om-deposit').value  = o.deposit || 0;
+    document.getElementById('om-notes').value    = o.notes || '';
+    orderItems = (o.items||[]).map(i => ({...i, id:'oi_'+Date.now()+Math.random()}));
+  } else {
+    const p = prefill || {};
+    document.getElementById('om-number').value  = genOrderNumber();
+    document.getElementById('om-status').value  = 'pending';
+    document.getElementById('om-buyer-name').value    = p.buyer?.name || '';
+    document.getElementById('om-buyer-addr').value    = p.buyer?.addr || '';
+    document.getElementById('om-buyer-contact').value = p.buyer?.contact || '';
+    document.getElementById('om-buyer-email').value   = p.buyer?.email || '';
+    document.getElementById('om-date').value     = today;
+    document.getElementById('om-delivery').value = '';
+    document.getElementById('om-currency').value = p.currency || 'USD';
+    document.getElementById('om-incoterm').value = p.incoterm || 'FOB';
+    document.getElementById('om-payment').value  = p.payment || '';
+    document.getElementById('om-deposit').value  = 0;
+    document.getElementById('om-notes').value    = '';
+    orderItems = (p.items||[]).map(i => ({ id:'oi_'+Date.now()+Math.random(), productId:i.productId||null, name:i.name||'', spec:i.spec||'', qty:i.qty||1, unit:i.unit||'PCS', price:i.price||0 }));
+  }
+  renderOrderCustomerOptions();
+  document.getElementById('om-customer-select').value = (id && (state.orders||[]).find(x=>x.id===id)?.customerId) || '';
+  renderOrderItems();
+  updateOrderTotals();
+  document.getElementById('order-modal').classList.add('show');
+}
+
+function addOrderItemRow(product) {
+  orderItems.push({
+    id: 'oi_' + Date.now() + Math.random(),
+    productId: product ? product.id : null,
+    name: product ? product.name : '',
+    spec: product ? (product.spec||'') : '',
+    qty: 1,
+    unit: product ? product.unit : 'PCS',
+    price: product ? (product.price||0) : 0
+  });
+  renderOrderItems();
+  updateOrderTotals();
+}
+
+function renderOrderItems() {
+  const el = document.getElementById('order-items-list');
+  if (!el) return;
+  const sym = currSym(document.getElementById('om-currency')?.value || 'USD');
+  if (orderItems.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-secondary);font-size:13px">暂无产品，点击下方添加</div>';
+    return;
+  }
+  el.innerHTML = orderItems.map((item, i) => `
+    <div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:12px;color:var(--text-secondary);font-weight:600">产品 ${i+1}</span>
+        <button class="btn btn-sm" style="background:#fce8e6;color:var(--danger);padding:2px 8px" onclick="removeOrderItem('${item.id}')">✕</button>
+      </div>
+      <div class="form-grid" style="grid-template-columns:2fr 0.9fr 0.8fr 1.3fr">
+        <div class="form-group"><label>产品名称</label>
+          <input type="text" value="${escHtml(item.name)}" onchange="updateOrderItem('${item.id}','name',this.value)" placeholder="Product Name"></div>
+        <div class="form-group"><label>数量</label>
+          <input type="number" value="${item.qty}" onchange="updateOrderItem('${item.id}','qty',+this.value)" min="1"></div>
+        <div class="form-group"><label>单位</label>
+          <select onchange="updateOrderItem('${item.id}','unit',this.value)">${buildUnitOptions(item.unit)}</select></div>
+        <div class="form-group"><label>单价</label>
+          <input type="number" value="${item.price}" onchange="updateOrderItem('${item.id}','price',+this.value)" step="0.01" min="0"></div>
+      </div>
+      <div style="text-align:right;font-size:13px;margin-top:6px;color:var(--text-secondary)">小计: <strong style="color:var(--text)">${sym}${(item.qty*item.price).toFixed(2)}</strong></div>
+    </div>`).join('');
+}
+
+function updateOrderItem(id, key, val) {
+  const item = orderItems.find(i => i.id === id);
+  if (item) item[key] = val;
+  updateOrderTotals();
+}
+
+function removeOrderItem(id) {
+  orderItems = orderItems.filter(i => i.id !== id);
+  renderOrderItems();
+  updateOrderTotals();
+}
+
+function getOrderTotal() {
+  return orderItems.reduce((s,i) => s + (i.qty||0) * (i.price||0), 0);
+}
+
+function updateOrderTotals() {
+  const sym = currSym(document.getElementById('om-currency')?.value || 'USD');
+  const total = getOrderTotal();
+  const dep = parseFloat(document.getElementById('om-deposit')?.value) || 0;
+  document.getElementById('om-total').value   = sym + total.toFixed(2);
+  document.getElementById('om-balance').value = sym + Math.max(0, total - dep).toFixed(2);
+}
+
+function saveOrder() {
+  const name = document.getElementById('om-buyer-name').value.trim();
+  if (!name) return alert('请填写客户公司名');
+  const data = {
+    number:   document.getElementById('om-number').value.trim() || genOrderNumber(),
+    status:   document.getElementById('om-status').value,
+    customerId: document.getElementById('om-customer-select').value || null,
+    buyer: {
+      name,
+      addr:    document.getElementById('om-buyer-addr').value.trim(),
+      contact: document.getElementById('om-buyer-contact').value.trim(),
+      email:   document.getElementById('om-buyer-email').value.trim(),
+    },
+    date:     document.getElementById('om-date').value,
+    delivery: document.getElementById('om-delivery').value,
+    currency: document.getElementById('om-currency').value,
+    incoterm: document.getElementById('om-incoterm').value,
+    payment:  document.getElementById('om-payment').value.trim(),
+    items:    orderItems.map(i => ({ productId:i.productId||null, name:i.name, spec:i.spec||'', qty:i.qty||0, unit:i.unit, price:i.price||0 })),
+    total:    getOrderTotal(),
+    deposit:  parseFloat(document.getElementById('om-deposit').value) || 0,
+    notes:    document.getElementById('om-notes').value.trim(),
+  };
+  if (!state.orders) state.orders = [];
+  if (editingOrderId) {
+    const idx = state.orders.findIndex(o => o.id === editingOrderId);
+    if (idx >= 0) state.orders[idx] = { ...state.orders[idx], ...data };
+  } else {
+    data.id = 'o_' + Date.now();
+    data.fromQuote = _pendingFromQuote || null;
+    data.createdAt = new Date().toISOString().split('T')[0];
+    state.orders.push(data);
+  }
+  _pendingFromQuote = null;
+  save();
+  closeModal('order-modal');
+  renderOrders();
+  alert('订单已保存');
+}
+
+function updateOrderStatus(id, status) {
+  const o = (state.orders||[]).find(x=>x.id===id);
+  if (!o) return;
+  o.status = status;
+  save();
+  renderOrders();
+}
+
+function deleteOrder(id) {
+  if (!confirm('确认删除此订单？')) return;
+  state.orders = (state.orders||[]).filter(o => o.id !== id);
+  save();
+  renderOrders();
+}
+
+let _pendingFromQuote = null;
+function convertQuoteToOrder() {
+  const q = buildQuoteData();
+  if (!q.buyer.name) { alert('请先填写报价单的客户公司名'); return; }
+  _pendingFromQuote = q.number || null;
+  showPage('orders');
+  openOrderModal(null, {
+    buyer: { name:q.buyer.name, addr:q.buyer.addr, contact:q.buyer.contact, email:q.buyer.email },
+    currency: q.currency, incoterm: q.incoterm, payment: q.payment,
+    items: q.items.map(i => ({ productId:i.productId, name:i.name, spec:i.spec, qty:i.qty, unit:i.unit, price:i.price })),
+  });
+}
+
+// ── 单据 PDF 共用：主题 / 抬头 / 信息框 / 表格 / 合计 / 签章 / 页脚 ──
+function getSellerInfo() {
+  const s = state.settings || {};
+  return {
+    nameEn: s.companyEn || 'Your Company Name', nameCn: s.companyCn || '',
+    addr: s.addr || '', tel: s.tel || '', email: s.email || '', web: s.web || '',
+    bank: s.bank || '', swift: s.swift || ''
+  };
+}
+function hexToRgb(hex) {
+  hex = String(hex||'').replace('#','');
+  if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  const n = parseInt(hex || '1d4ed8', 16);
+  if (isNaN(n)) return [29,78,216];
+  return [(n>>16)&255, (n>>8)&255, n&255];
+}
+function docTheme() {
+  const s = state.settings || {};
+  const rgb = hexToRgb(s.docColor || '#1d4ed8');
+  const light = rgb.map(c => Math.round(c + (255-c)*0.88));   // 极浅同色背景
+  const sh = s.docShow || {};
+  return {
+    style: s.docStyle || 'classic',   // classic | minimal | modern
+    rgb, light,
+    logo: s.logo || null, logoRatio: s.logoRatio || 1,
+    stamp: s.stamp || null, stampRatio: s.stampRatio || 1,
+    signatory: s.signatory || '',
+    show: { bank: sh.bank!==false, payment: sh.payment!==false, remarks: sh.remarks!==false, grossCbm: sh.grossCbm!==false }
+  };
+}
+function pdfDocHeader(doc, seller, title, docNo, date, t) {
+  const pageW = 210, margin = 16;
+  const contact = [seller.tel, seller.email, seller.web].filter(Boolean).join('  |  ');
+
+  if (t.style === 'minimal') {
+    // 极简黑白：白底、细线、字距、theme 色仅作小标题强调
+    let tx = margin;
+    if (t.logo) { try { const lh=13, lw=Math.min(38, lh*(t.logoRatio||1)); doc.addImage(t.logo,'PNG',margin,8,lw,lh); tx=margin+lw+5; } catch(e){} }
+    doc.setTextColor(20,20,20); doc.setFontSize(11); doc.setFont(undefined,'bold');
+    doc.text((seller.nameEn||'').toUpperCase(), tx, 13, {charSpace:0.6});
+    doc.setFont(undefined,'normal'); doc.setFontSize(7); doc.setTextColor(130,130,130);
+    let yy = 18;
+    if (seller.nameCn) { doc.text(seller.nameCn, tx, yy); yy += 4; }
+    if (seller.addr)   { doc.text(seller.addr, tx, yy, {maxWidth:115}); yy += 4; }
+    if (contact)       doc.text(contact, tx, yy, {maxWidth:115});
+    doc.setTextColor(t.rgb[0],t.rgb[1],t.rgb[2]); doc.setFontSize(20); doc.setFont(undefined,'normal');
+    doc.text(title.toUpperCase(), pageW - margin, 14, {align:'right', charSpace:1.5});
+    doc.setTextColor(90,90,90); doc.setFontSize(8); doc.setFont(undefined,'normal');
+    doc.text(`${docNo}`, pageW - margin, 20, {align:'right'});
+    doc.text(`${date}`, pageW - margin, 24.5, {align:'right'});
+    doc.setDrawColor(20,20,20); doc.setLineWidth(0.5); doc.line(margin, 30, pageW-margin, 30); doc.setLineWidth(0.2);
+    doc.setTextColor(0,0,0);
+    return;
+  }
+
+  if (t.style === 'modern') {
+    // 现代强调色：顶部彩条 + 白底深字 + 彩色标题 + 胶囊
+    doc.setFillColor(t.rgb[0],t.rgb[1],t.rgb[2]); doc.rect(0, 0, pageW, 5, 'F');
+    let tx = margin;
+    if (t.logo) { try { const lh=15, lw=Math.min(42, lh*(t.logoRatio||1)); doc.addImage(t.logo,'PNG',margin,9,lw,lh); tx=margin+lw+5; } catch(e){} }
+    doc.setTextColor(22,36,31); doc.setFontSize(14); doc.setFont(undefined,'bold');
+    doc.text(seller.nameEn, tx, 14);
+    doc.setFont(undefined,'normal'); doc.setFontSize(7.5); doc.setTextColor(94,112,107);
+    let yy = 18.5;
+    if (seller.nameCn) { doc.text(seller.nameCn, tx, yy); yy += 4.2; }
+    if (seller.addr)   { doc.text(seller.addr, tx, yy, {maxWidth:115}); yy += 4.2; }
+    if (contact)       doc.text(contact, tx, yy, {maxWidth:115});
+    doc.setTextColor(t.rgb[0],t.rgb[1],t.rgb[2]); doc.setFontSize(18); doc.setFont(undefined,'bold');
+    doc.text(title, pageW - margin, 14, {align:'right'});
+    doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(94,112,107);
+    doc.text(`No.: ${docNo}`, pageW - margin, 21, {align:'right'});
+    doc.text(`Date: ${date}`, pageW - margin, 25.5, {align:'right'});
+    doc.setTextColor(0,0,0);
+    return;
+  }
+
+  // classic 经典商务蓝：实色色块抬头
+  doc.setFillColor(t.rgb[0],t.rgb[1],t.rgb[2]); doc.rect(0, 0, pageW, 28, 'F');
+  let tx = margin;
+  if (t.logo) { try { const lh=16, lw=Math.min(46, lh*(t.logoRatio||1)); doc.addImage(t.logo,'PNG',margin,6,lw,lh); tx=margin+lw+5; } catch(e){} }
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(14); doc.setFont(undefined,'bold');
+  doc.text(seller.nameEn, tx, 11);
+  doc.setFont(undefined,'normal'); doc.setFontSize(7.5);
+  let yy = 15.5;
+  if (seller.nameCn) { doc.text(seller.nameCn, tx, yy); yy += 4.3; }
+  if (seller.addr)   { doc.text(seller.addr, tx, yy, {maxWidth:118}); yy += 4.3; }
+  if (contact) doc.text(contact, tx, yy, {maxWidth:118});
+  doc.setFontSize(15); doc.setFont(undefined,'bold');
+  doc.text(title, pageW - margin, 12, {align:'right'});
+  doc.setFontSize(8); doc.setFont(undefined,'normal');
+  doc.text(`No.: ${docNo}`, pageW - margin, 19, {align:'right'});
+  doc.text(`Date: ${date}`, pageW - margin, 23.5, {align:'right'});
+  doc.setTextColor(0,0,0);
+}
+function pdfDocFooter(doc, seller, t) {
+  const pageW = 210, pageH = 297;
+  const txt = `Generated by 鱼市Pro  ·  ${seller.email||''}  ·  ${seller.web||''}`;
+  if (t.style === 'minimal') {
+    doc.setDrawColor(225,225,225); doc.setLineWidth(0.2); doc.line(16, pageH-9, pageW-16, pageH-9);
+    doc.setTextColor(170,170,170); doc.setFontSize(7);
+    doc.text(txt, pageW/2, pageH-4.5, {align:'center', charSpace:0.4});
+    doc.setTextColor(0,0,0);
+    return;
+  }
+  doc.setFillColor(t.rgb[0],t.rgb[1],t.rgb[2]); doc.rect(0, pageH-10, pageW, 10, 'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(7);
+  doc.text(txt, pageW/2, pageH-4, {align:'center'});
+  doc.setTextColor(0,0,0);
+}
+// 左右两个信息框：Bill To + Terms（terms 为 [label,value] 数组）
+function drawInfoBoxes(doc, y, t, buyer, terms) {
+  const pageW=210, margin=16, halfW=(pageW-margin*2-8)/2, h=30;
+  const lx = margin, rx = margin+halfW+8;
+  const pad = (t.style === 'minimal') ? 0 : 5;
+
+  if (t.style === 'classic') {
+    [lx, rx].forEach(bx => {
+      doc.setFillColor(t.light[0],t.light[1],t.light[2]); doc.roundedRect(bx, y, halfW, h, 1.5,1.5,'F');
+      doc.setFillColor(t.rgb[0],t.rgb[1],t.rgb[2]); doc.rect(bx, y, 1.4, h, 'F');
+    });
+  } else if (t.style === 'modern') {
+    [lx, rx].forEach(bx => {
+      doc.setFillColor(t.light[0],t.light[1],t.light[2]); doc.setDrawColor(t.rgb[0],t.rgb[1],t.rgb[2]); doc.setLineWidth(0.3);
+      doc.roundedRect(bx, y, halfW, h, 2.5,2.5,'FD');
+    });
+    doc.setLineWidth(0.2);
+  }
+  // minimal：无底框，纯文字 + 细线分隔由留白完成
+
+  const labelColor = (t.style === 'minimal') ? [150,150,150] : t.rgb;
+  const bodyColor  = (t.style === 'minimal') ? [30,30,30] : [40,40,40];
+  doc.setTextColor(labelColor[0],labelColor[1],labelColor[2]); doc.setFont(undefined,'bold'); doc.setFontSize(t.style==='minimal'?7.5:8);
+  doc.text('BILL TO', lx+pad, y+6, t.style==='minimal'?{charSpace:1}:{});
+  doc.setTextColor(bodyColor[0],bodyColor[1],bodyColor[2]); doc.setFont(undefined,'bold'); doc.setFontSize(9);
+  doc.text(buyer.name||'—', lx+pad, y+12, {maxWidth:halfW-pad-3});
+  doc.setFont(undefined,'normal'); doc.setFontSize(7.5);
+  if (buyer.addr) doc.text(buyer.addr, lx+pad, y+17.5, {maxWidth:halfW-pad-3});
+  const bl=[buyer.contact,buyer.email].filter(Boolean).join('  ·  ');
+  if (bl) doc.text(bl, lx+pad, y+25, {maxWidth:halfW-pad-3});
+
+  doc.setTextColor(labelColor[0],labelColor[1],labelColor[2]); doc.setFont(undefined,'bold'); doc.setFontSize(t.style==='minimal'?7.5:8);
+  doc.text('TERMS', rx+pad, y+6, t.style==='minimal'?{charSpace:1}:{});
+  doc.setTextColor(bodyColor[0],bodyColor[1],bodyColor[2]); doc.setFont(undefined,'normal'); doc.setFontSize(7.5);
+  let ty=y+12;
+  terms.forEach(tr => { if (tr[1]) { doc.text(`${tr[0]}: ${tr[1]}`, rx+pad, ty, {maxWidth:halfW-pad-3}); ty+=5.2; } });
+  doc.setTextColor(0,0,0);
+}
+function docTableOpts(t, startY, head, body, foot, columnStyles) {
+  const opts = { startY, margin:{left:16,right:16}, head, body, columnStyles };
+  if (foot) opts.foot = foot;
+  if (t.style === 'minimal') {
+    opts.theme = 'plain';
+    opts.styles = { fontSize:8, cellPadding:{top:3.2,bottom:3.2,left:3,right:3}, lineColor:[228,228,228], lineWidth:{bottom:0.1}, textColor:[40,40,40], overflow:'linebreak' };
+    opts.headStyles = { fillColor:[255,255,255], textColor:[120,120,120], fontStyle:'bold', fontSize:7.5, lineColor:[20,20,20], lineWidth:{bottom:0.5} };
+    opts.footStyles = { fillColor:[255,255,255], textColor:[20,20,20], fontStyle:'bold', lineColor:[20,20,20], lineWidth:{top:0.5} };
+  } else if (t.style === 'modern') {
+    opts.theme = 'plain';
+    opts.styles = { fontSize:8, cellPadding:3, lineColor:[228,238,235], lineWidth:{bottom:0.1}, overflow:'linebreak' };
+    opts.headStyles = { fillColor:t.rgb, textColor:[255,255,255], fontStyle:'bold', fontSize:8 };
+    opts.footStyles = { fillColor:t.light, textColor:t.rgb, fontStyle:'bold' };
+  } else {
+    opts.styles = { fontSize:8, cellPadding:3, lineColor:[229,233,240], lineWidth:0.1, overflow:'linebreak' };
+    opts.headStyles = { fillColor:t.rgb, textColor:[255,255,255], fontStyle:'bold', fontSize:8 };
+    opts.footStyles = { fillColor:t.light, textColor:t.rgb, fontStyle:'bold' };
+    opts.alternateRowStyles = { fillColor:[247,249,252] };
+  }
+  return opts;
+}
+// 右下角合计框；rows 为 [[label,val]...] 小计行，grand 为强调行
+function drawTotalsBox(doc, y, t, rows, grandLabel, grandVal) {
+  const pageW=210, margin=16, boxW=82, x=pageW-margin-boxW;
+  doc.setFontSize(8.5);
+  rows.forEach(r => {
+    doc.setTextColor(75,85,99); doc.setFont(undefined,'normal');
+    doc.text(r[0], x+3, y+4.5); doc.text(r[1], pageW-margin-3, y+4.5, {align:'right'});
+    y += 6.5;
+  });
+  if (t.style === 'minimal') {
+    doc.setDrawColor(20,20,20); doc.setLineWidth(0.5); doc.line(x, y, pageW-margin, y); doc.setLineWidth(0.2);
+    doc.setTextColor(20,20,20); doc.setFont(undefined,'bold'); doc.setFontSize(12);
+    doc.text(grandLabel, x, y+7); doc.text(grandVal, pageW-margin, y+7, {align:'right'});
+    doc.setTextColor(0,0,0);
+    return y + 9;
+  }
+  if (t.style === 'modern') {
+    doc.setFillColor(t.rgb[0],t.rgb[1],t.rgb[2]); doc.roundedRect(x, y, boxW, 12, 2.5,2.5,'F');
+    doc.setTextColor(255,255,255); doc.setFont(undefined,'bold'); doc.setFontSize(11);
+    doc.text(grandLabel, x+4, y+7.7); doc.text(grandVal, pageW-margin-4, y+7.7, {align:'right'});
+    doc.setTextColor(0,0,0);
+    return y + 12;
+  }
+  doc.setFillColor(t.light[0],t.light[1],t.light[2]); doc.roundedRect(x, y, boxW, 11, 1.5,1.5,'F');
+  doc.setTextColor(t.rgb[0],t.rgb[1],t.rgb[2]); doc.setFont(undefined,'bold'); doc.setFontSize(11);
+  doc.text(grandLabel, x+4, y+7.2); doc.text(grandVal, pageW-margin-4, y+7.2, {align:'right'});
+  doc.setTextColor(0,0,0);
+  return y + 11;
+}
+function drawDocSignature(doc, y, t) {
+  const pageW=210, margin=16;
+  doc.setTextColor(0,0,0); doc.setFontSize(8); doc.setFont(undefined,'bold');
+  doc.text('Authorized Signature / Stamp', pageW-margin-72, y);
+  doc.setFont(undefined,'normal');
+  if (t.stamp) { try { const sh=30, sw=Math.min(42, sh*(t.stampRatio||1)); doc.addImage(t.stamp,'PNG',pageW-margin-sw-6,y+2,sw,sh); } catch(e){} }
+  doc.setDrawColor(120,120,120); doc.line(pageW-margin-72, y+24, pageW-margin, y+24);
+  if (t.signatory) doc.text(t.signatory, pageW-margin-72, y+29);
+}
+
+// 形式发票 (Proforma Invoice)
+function exportOrderPI(orderId) {
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) { alert('PDF库加载失败，请检查网络连接'); return; }
+  const o = (state.orders||[]).find(x => x.id === orderId);
+  if (!o) return;
+  const seller = getSellerInfo(), t = docTheme();
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const pageW = 210, margin = 16;
+  const piNo = 'PI-' + (o.number||'').replace(/^SO-/,'');
+  pdfDocHeader(doc, seller, 'PROFORMA INVOICE', piNo, o.date || '', t);
+
+  let y = 36;
+  drawInfoBoxes(doc, y, t, o.buyer||{}, [['Incoterm',o.incoterm],['Payment',o.payment],['Currency',o.currency]]);
+  y += 36;
+
+  const body = (o.items||[]).map((it,i) => [
+    i+1, it.name, it.spec||'', it.qty, it.unit,
+    `${o.currency} ${(+it.price).toFixed(2)}`,
+    `${o.currency} ${((+it.qty)*(+it.price)).toFixed(2)}`
+  ]);
+  doc.autoTable(docTableOpts(t, y,
+    [['#','Description','Specification','Qty','Unit','Unit Price','Amount']], body, null,
+    { 0:{halign:'center',cellWidth:8}, 3:{halign:'center'}, 4:{halign:'center'}, 5:{halign:'right'}, 6:{halign:'right'} }
+  ));
+  y = doc.lastAutoTable.finalY + 8;
+
+  const dep = o.deposit||0, bal = Math.max(0,(o.total||0)-dep);
+  if (t.show.payment) {
+    y = drawTotalsBox(doc, y, t,
+      [['Subtotal', `${o.currency} ${(o.total||0).toFixed(2)}`], ['Deposit Received', `${o.currency} ${dep.toFixed(2)}`]],
+      'BALANCE DUE', `${o.currency} ${bal.toFixed(2)}`);
+  } else {
+    y = drawTotalsBox(doc, y, t, [], 'TOTAL', `${o.currency} ${(o.total||0).toFixed(2)}`);
+  }
+  y += 8;
+
+  doc.setFontSize(8); doc.setTextColor(0,0,0);
+  if (o.notes && t.show.remarks) { doc.setFont(undefined,'bold'); doc.text('Remarks:', margin, y); y += 5; doc.setFont(undefined,'normal'); doc.text(o.notes, margin, y, {maxWidth:pageW-margin*2}); y += 10; }
+  if (seller.bank && t.show.bank) { doc.setFont(undefined,'bold'); doc.text('Banking Details:', margin, y); y += 5; doc.setFont(undefined,'normal'); doc.text(`${seller.bank}  |  ${seller.swift}`, margin, y); y += 10; }
+  drawDocSignature(doc, Math.max(y+2, 228), t);
+
+  pdfDocFooter(doc, seller, t);
+  doc.save(`PI_${o.number}_${o.buyer?.name||'Client'}.pdf`);
+}
+
+// 装箱单 (Packing List)
+function exportOrderPackingList(orderId) {
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) { alert('PDF库加载失败，请检查网络连接'); return; }
+  const o = (state.orders||[]).find(x => x.id === orderId);
+  if (!o) return;
+  const seller = getSellerInfo(), t = docTheme();
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const pageW = 210, margin = 16;
+  const plNo = 'PL-' + (o.number||'').replace(/^SO-/,'');
+  pdfDocHeader(doc, seller, 'PACKING LIST', plNo, o.date || '', t);
+
+  let y = 36;
+  drawInfoBoxes(doc, y, t, o.buyer||{}, [['Order No.',o.number],['Incoterm',o.incoterm],['Date',o.date]]);
+  y += 36;
+
+  const showGW = t.show.grossCbm;
+  let totalQty = 0, totalNW = 0;
+  const body = (o.items||[]).map((it,i) => {
+    const prod = (state.products||[]).find(p => p.id === it.productId);
+    const unitW = prod && prod.weight ? +prod.weight : 0;
+    const nw = unitW * (+it.qty||0);
+    totalQty += (+it.qty||0); totalNW += nw;
+    const row = [i+1, it.name, it.spec||'', it.qty, it.unit, nw ? nw.toFixed(3) : ''];
+    if (showGW) row.push('');
+    return row;
+  });
+  const head = showGW
+    ? [['#','Description','Specification','Qty','Unit','N.W.(kg)','G.W.(kg)']]
+    : [['#','Description','Specification','Qty','Unit','N.W.(kg)']];
+  const foot = showGW
+    ? [[{ content:'TOTAL', colSpan:3, styles:{halign:'right',fontStyle:'bold'} }, totalQty, '', totalNW ? totalNW.toFixed(3) : '', '']]
+    : [[{ content:'TOTAL', colSpan:3, styles:{halign:'right',fontStyle:'bold'} }, totalQty, '', totalNW ? totalNW.toFixed(3) : '']];
+  const colStyles = { 0:{halign:'center',cellWidth:8}, 3:{halign:'center'}, 4:{halign:'center'}, 5:{halign:'right'} };
+  if (showGW) colStyles[6] = {halign:'right'};
+  doc.autoTable(docTableOpts(t, y, head, body, foot, colStyles));
+  y = doc.lastAutoTable.finalY + 10;
+
+  doc.setFontSize(8); doc.setTextColor(0,0,0);
+  doc.setFont(undefined,'bold'); doc.text('Shipment Summary:', margin, y); y += 5.5;
+  doc.setFont(undefined,'normal');
+  doc.text(`Total Net Weight:  ${totalNW ? totalNW.toFixed(3)+' kg' : '__________ kg'}`, margin, y); y += 5.5;
+  if (showGW) {
+    doc.text('Total Packages / CTNs:  __________', margin, y); y += 5.5;
+    doc.text('Total Gross Weight:  __________ kg', margin, y); y += 5.5;
+    doc.text('Measurement / CBM:  __________', margin, y); y += 5.5;
+  }
+  drawDocSignature(doc, Math.max(y+4, 228), t);
+
+  pdfDocFooter(doc, seller, t);
+  doc.save(`PackingList_${o.number}_${o.buyer?.name||'Client'}.pdf`);
+}
+
+// ═══════════════════════════════════════
 //  CUSTOMER MANAGEMENT
 // ═══════════════════════════════════════
 const STAGES = {
@@ -2815,6 +3749,43 @@ function countryName(code) {
   const c = COUNTRY_LIST.find(x=>x[1]===code);
   return c ? c[2] : code;
 }
+
+// 客户所在国家代表时区（多时区国家取主要商业城市，仅供参考）
+const COUNTRY_TZ = {
+  US:'America/New_York', GB:'Europe/London', DE:'Europe/Berlin', FR:'Europe/Paris',
+  JP:'Asia/Tokyo', AU:'Australia/Sydney', CA:'America/Toronto', IN:'Asia/Kolkata',
+  BR:'America/Sao_Paulo', RU:'Europe/Moscow', KR:'Asia/Seoul', IT:'Europe/Rome',
+  ES:'Europe/Madrid', NL:'Europe/Amsterdam', SG:'Asia/Singapore', MY:'Asia/Kuala_Lumpur',
+  TH:'Asia/Bangkok', VN:'Asia/Ho_Chi_Minh', ID:'Asia/Jakarta', PH:'Asia/Manila',
+  MX:'America/Mexico_City', AE:'Asia/Dubai', SA:'Asia/Riyadh', ZA:'Africa/Johannesburg',
+  TR:'Europe/Istanbul', PL:'Europe/Warsaw', SE:'Europe/Stockholm', CH:'Europe/Zurich',
+  BE:'Europe/Brussels', PT:'Europe/Lisbon', AR:'America/Argentina/Buenos_Aires', CL:'America/Santiago',
+  PK:'Asia/Karachi', BD:'Asia/Dhaka', NG:'Africa/Lagos', EG:'Africa/Cairo'
+};
+// 返回 { timeStr, working, tz }；working = 当地 09:00-18:00（工作时段）
+function customerLocalTime(code) {
+  const tz = COUNTRY_TZ[code];
+  if (!tz) return null;
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone:tz, hour:'2-digit', minute:'2-digit', hour12:false }).formatToParts(new Date());
+    const hh = +parts.find(p=>p.type==='hour').value;
+    const mm = parts.find(p=>p.type==='minute').value;
+    return { timeStr: String(hh).padStart(2,'0')+':'+mm, working: hh>=9 && hh<18, tz };
+  } catch(e) { return null; }
+}
+// 每分钟刷新页面上的客户当地时间
+function updateCustomerClocks() {
+  document.querySelectorAll('.cust-clock').forEach(el => {
+    const tz = el.getAttribute('data-tz'); if (!tz) return;
+    try {
+      const parts = new Intl.DateTimeFormat('en-GB', { timeZone:tz, hour:'2-digit', minute:'2-digit', hour12:false }).formatToParts(new Date());
+      const hh = +parts.find(p=>p.type==='hour').value, mm = parts.find(p=>p.type==='minute').value;
+      el.textContent = String(hh).padStart(2,'0')+':'+mm;
+      el.style.color = (hh>=9 && hh<18) ? 'var(--success)' : 'var(--text-secondary)';
+    } catch(e) {}
+  });
+}
+setInterval(updateCustomerClocks, 60000);
 
 function switchCustomerView(v) {
   customerView = v;
@@ -2868,12 +3839,17 @@ function renderKanban(list) {
 
 function renderCustomerList(list) {
   const tbody = document.getElementById('customer-list-tbody');
-  if(!list.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty"><p>暂无客户数据</p></div></td></tr>`;return;}
+  if(!list.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><p>暂无客户数据</p></div></td></tr>`;return;}
   tbody.innerHTML = list.map(c=>{
     const s = STAGES[c.stage]||STAGES.new_lead;
+    const lt = customerLocalTime(c.country);
+    const ltCell = lt
+      ? `<span class="cust-clock" data-tz="${lt.tz}" title="客户当地时间（绿色=营业时段 09:00-18:00，适合联系）" style="font-weight:600;color:${lt.working?'var(--success)':'var(--text-secondary)'}">${lt.timeStr}</span>`
+      : '<span style="color:var(--text-secondary)">—</span>';
     return `<tr onclick="openCustomerDetail('${c.id}')" style="cursor:pointer">
       <td><strong>${countryFlag(c.country)} ${escHtml(c.company)}</strong><br><span style="font-size:11px;color:var(--text-secondary)">${escHtml(c.contact||'')}</span></td>
       <td>${countryName(c.country)}</td>
+      <td>${ltCell}</td>
       <td><span class="badge" style="background:${s.bg};color:${s.color}">${s.label}</span></td>
       <td>${followupBadge(c.nextFollowup)}</td>
       <td>${escHtml(c.source||'—')}</td>
