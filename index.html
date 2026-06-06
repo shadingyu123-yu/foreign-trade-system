@@ -332,6 +332,39 @@
   /* Supplier info in table */
   .supplier-chip { display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--text-secondary); }
 
+  /* Kanban */
+  .kanban-wrap { display:flex; gap:14px; overflow-x:auto; padding-bottom:12px; min-height:400px; }
+  .kanban-col { flex-shrink:0; width:240px; background:var(--bg); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:8px; }
+  .kanban-col-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .kanban-col-title { font-size:13px; font-weight:700; }
+  .kanban-count { font-size:11px; background:rgba(0,0,0,0.08); border-radius:10px; padding:1px 7px; font-weight:600; }
+  .customer-card {
+    background:#fff; border:1px solid var(--border); border-radius:8px; padding:11px 12px;
+    cursor:pointer; transition:all .15s; border-left:3px solid transparent;
+  }
+  .customer-card:hover { box-shadow:0 2px 10px rgba(0,0,0,0.10); transform:translateY(-1px); }
+  .customer-card-name { font-size:13px; font-weight:600; margin-bottom:2px; }
+  .customer-card-contact { font-size:11px; color:var(--text-secondary); margin-bottom:6px; }
+  .customer-card-footer { display:flex; align-items:center; justify-content:space-between; margin-top:6px; }
+  .followup-badge { font-size:10px; padding:2px 6px; border-radius:4px; font-weight:500; }
+  .followup-ok { background:#e6f4ea; color:var(--success); }
+  .followup-soon { background:#fef7e0; color:#a07000; }
+  .followup-late { background:#fce8e6; color:var(--danger); }
+  /* Stage colors */
+  .stage-new_lead    { color:#64748b; } .stage-bg-new_lead    { background:#f1f5f9; }
+  .stage-quotation   { color:#1a73e8; } .stage-bg-quotation   { background:#e8f0fe; }
+  .stage-sample      { color:#f29900; } .stage-bg-sample      { background:#fef7e0; }
+  .stage-negotiation { color:#9c27b0; } .stage-bg-negotiation { background:#f3e5f5; }
+  .stage-closed      { color:#34a853; } .stage-bg-closed      { background:#e6f4ea; }
+  .stage-hold        { color:#ea4335; } .stage-bg-hold        { background:#fce8e6; }
+  /* Customer modal */
+  .history-entry { padding:10px 12px; background:var(--bg); border-radius:6px; margin-bottom:8px; font-size:13px; }
+  .history-entry-date { font-size:11px; color:var(--text-secondary); margin-bottom:4px; }
+  .history-entry-text { line-height:1.5; }
+  /* Calc currency row */
+  .currency-pair { display:flex; align-items:center; gap:8px; }
+  .currency-pair .arrow { color:var(--text-secondary); font-size:18px; flex-shrink:0; }
+
   /* Responsive */
   @media (max-width: 768px) {
     :root { --sidebar-width: 56px; }
@@ -413,6 +446,10 @@
   <div class="nav-item" onclick="showPage('quote')">
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     <span>报价单</span>
+  </div>
+  <div class="nav-item" onclick="showPage('customers')">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>客户管理</span>
   </div>
   <div class="sidebar-section" style="margin-top:auto">设置</div>
   <div class="nav-item" onclick="showPage('settings')">
@@ -521,8 +558,21 @@
                 <input type="text" id="calc-name" placeholder="产品描述">
               </div>
               <div class="form-group">
-                <label>采购价 (¥/件)</label>
-                <input type="number" id="calc-cost" placeholder="0.00" oninput="calculate()">
+                <label id="calc-cost-label">采购价 (¥/件)</label>
+                <div style="display:flex;gap:6px">
+                  <select id="calc-cost-currency" onchange="syncCalcRate();updateCalcLabels();calculate()" style="flex-shrink:0;width:130px">
+                    <option value="CNY">CNY 人民币</option>
+                    <option value="USD">USD 美元</option>
+                    <option value="EUR">EUR 欧元</option>
+                    <option value="GBP">GBP 英镑</option>
+                    <option value="JPY">JPY 日元</option>
+                    <option value="AUD">AUD 澳元</option>
+                    <option value="CAD">CAD 加元</option>
+                    <option value="HKD">HKD 港元</option>
+                    <option value="SGD">SGD 新元</option>
+                  </select>
+                  <input type="number" id="calc-cost" placeholder="0.00" oninput="calculate()" style="flex:1">
+                </div>
               </div>
               <div class="form-group">
                 <label>数量</label>
@@ -533,29 +583,40 @@
           <div class="card" style="margin-bottom:16px">
             <div class="card-title">汇率 & 报价</div>
             <div class="form-grid">
-              <div class="form-group">
-                <label>报价币种</label>
-                <select id="calc-currency" onchange="syncCalcRate();calculate()">
-                  <option value="USD">USD 美元</option>
-                  <option value="EUR">EUR 欧元</option>
-                  <option value="GBP">GBP 英镑</option>
-                  <option value="JPY">JPY 日元</option>
-                  <option value="AUD">AUD 澳元</option>
-                </select>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>币种换算</label>
+                <div class="currency-pair">
+                  <select id="calc-currency" onchange="syncCalcRate();updateCalcLabels();calculate()" style="flex:1">
+                    <option value="USD">USD 美元</option>
+                    <option value="EUR">EUR 欧元</option>
+                    <option value="GBP">GBP 英镑</option>
+                    <option value="JPY">JPY 日元</option>
+                    <option value="AUD">AUD 澳元</option>
+                    <option value="CAD">CAD 加元</option>
+                    <option value="HKD">HKD 港元</option>
+                    <option value="SGD">SGD 新元</option>
+                    <option value="CNY">CNY 人民币</option>
+                  </select>
+                  <span class="arrow">→</span>
+                  <span id="calc-cost-cur-display" style="font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap">CNY 人民币</span>
+                </div>
               </div>
               <div class="form-group">
-                <label>汇率 (1外币 = ?人民币)</label>
-                <input type="number" id="calc-rate" placeholder="7.25" value="7.25" step="0.01" oninput="calculate()">
+                <label id="calc-rate-label">汇率 (1 USD = ? CNY)</label>
+                <input type="number" id="calc-rate" placeholder="7.25" value="7.25" step="0.0001" oninput="calculate()">
               </div>
               <div class="form-group">
-                <label>目标报价 (外币/件)</label>
+                <label id="calc-price-label">目标报价 (USD/件)</label>
                 <input type="number" id="calc-price" placeholder="0.00" oninput="calculate()">
               </div>
               <div class="form-group">
                 <label>贸易条款</label>
-                <select id="calc-incoterm" onchange="calculate()">
-                  <option>FOB</option><option>CIF</option><option>EXW</option><option>CFR</option><option>DDP</option>
-                </select>
+                <div style="display:flex;gap:6px">
+                  <select id="calc-incoterm" onchange="calculate()" style="flex:1">
+                    <option>FOB</option><option>CIF</option><option>EXW</option><option>CFR</option><option>DDP</option>
+                  </select>
+                  <button class="csd-info-btn" onclick="showTermInfo(document.getElementById('calc-incoterm').value,event)" title="查看贸易条款说明">▲</button>
+                </div>
               </div>
             </div>
           </div>
@@ -772,6 +833,39 @@
       </div>
     </div>
 
+    <!-- Customers -->
+    <div id="page-customers" class="page">
+      <!-- Toolbar -->
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <input type="text" id="customer-search" placeholder="搜索公司、联系人、国家…" style="width:220px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px" oninput="renderCustomers()">
+        <select id="customer-stage-filter" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="renderCustomers()">
+          <option value="">全部阶段</option>
+          <option value="new_lead">初次接触</option>
+          <option value="quotation">报价中</option>
+          <option value="sample">样品跟进</option>
+          <option value="negotiation">订单谈判</option>
+          <option value="closed">已成交</option>
+          <option value="hold">暂停/流失</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="switchCustomerView('kanban')" id="btn-kanban-view">🗂 看板</button>
+        <button class="btn btn-ghost btn-sm" onclick="switchCustomerView('list')" id="btn-list-view">📋 列表</button>
+        <button class="btn btn-primary" style="margin-left:auto" onclick="openCustomerModal()">+ 新建客户</button>
+      </div>
+      <!-- Kanban view -->
+      <div id="customer-kanban" class="kanban-wrap"></div>
+      <!-- List view -->
+      <div id="customer-list" style="display:none">
+        <div class="card">
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>公司 / 联系人</th><th>国家</th><th>阶段</th><th>下次跟进</th><th>来源</th><th>操作</th></tr></thead>
+              <tbody id="customer-list-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -807,8 +901,21 @@
           <input type="text" id="p-spec" placeholder="尺寸、颜色、材质等">
         </div>
         <div class="form-group">
-          <label>采购价 (¥) *</label>
-          <input type="number" id="p-cost" placeholder="0.00" step="0.01">
+          <label>采购价 *</label>
+          <div style="display:flex;gap:6px">
+            <select id="p-cost-currency" style="width:110px;flex-shrink:0">
+              <option value="CNY">¥ CNY</option>
+              <option value="USD">$ USD</option>
+              <option value="EUR">€ EUR</option>
+              <option value="GBP">£ GBP</option>
+              <option value="JPY">¥ JPY</option>
+              <option value="AUD">A$ AUD</option>
+              <option value="CAD">C$ CAD</option>
+              <option value="HKD">HK$ HKD</option>
+              <option value="SGD">S$ SGD</option>
+            </select>
+            <input type="number" id="p-cost" placeholder="0.00" step="0.01" style="flex:1">
+          </div>
         </div>
         <div class="form-group">
           <label>建议报价 (外币)</label>
@@ -938,6 +1045,116 @@
       <button class="btn btn-ghost" onclick="closeModal('product-modal')">取消</button>
       <button class="btn btn-primary" onclick="saveProduct()">保存</button>
     </div>
+  </div>
+</div>
+
+<!-- Customer Edit Modal -->
+<div class="modal-overlay" id="customer-modal">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <h3>客户信息</h3>
+      <button class="modal-close" onclick="closeModal('customer-modal')">&times;</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>公司 / 客户名称 *</label>
+        <input type="text" id="cm-company" placeholder="公司名称或个人姓名">
+      </div>
+      <div class="form-group">
+        <label>联系人</label>
+        <input type="text" id="cm-contact" placeholder="联系人姓名">
+      </div>
+      <div class="form-group">
+        <label>国家 / 地区</label>
+        <select id="cm-country">
+          <option value="">— 请选择 —</option>
+          <option value="US">🇺🇸 美国</option><option value="GB">🇬🇧 英国</option>
+          <option value="DE">🇩🇪 德国</option><option value="FR">🇫🇷 法国</option>
+          <option value="JP">🇯🇵 日本</option><option value="AU">🇦🇺 澳大利亚</option>
+          <option value="CA">🇨🇦 加拿大</option><option value="IN">🇮🇳 印度</option>
+          <option value="BR">🇧🇷 巴西</option><option value="RU">🇷🇺 俄罗斯</option>
+          <option value="KR">🇰🇷 韩国</option><option value="IT">🇮🇹 意大利</option>
+          <option value="ES">🇪🇸 西班牙</option><option value="NL">🇳🇱 荷兰</option>
+          <option value="SG">🇸🇬 新加坡</option><option value="MY">🇲🇾 马来西亚</option>
+          <option value="TH">🇹🇭 泰国</option><option value="VN">🇻🇳 越南</option>
+          <option value="ID">🇮🇩 印度尼西亚</option><option value="PH">🇵🇭 菲律宾</option>
+          <option value="MX">🇲🇽 墨西哥</option><option value="AE">🇦🇪 阿联酋</option>
+          <option value="SA">🇸🇦 沙特</option><option value="ZA">🇿🇦 南非</option>
+          <option value="TR">🇹🇷 土耳其</option><option value="PL">🇵🇱 波兰</option>
+          <option value="SE">🇸🇪 瑞典</option><option value="CH">🇨🇭 瑞士</option>
+          <option value="BE">🇧🇪 比利时</option><option value="PT">🇵🇹 葡萄牙</option>
+          <option value="AR">🇦🇷 阿根廷</option><option value="PK">🇵🇰 巴基斯坦</option>
+          <option value="NG">🇳🇬 尼日利亚</option><option value="EG">🇪🇬 埃及</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>联系电话</label>
+        <input type="text" id="cm-phone" placeholder="+1-xxx-xxxx-xxxx">
+      </div>
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="text" id="cm-email" placeholder="email@example.com">
+      </div>
+      <div class="form-group">
+        <label>WhatsApp</label>
+        <input type="text" id="cm-whatsapp" placeholder="+1-xxx-xxxx-xxxx">
+      </div>
+      <div class="form-group">
+        <label>微信</label>
+        <input type="text" id="cm-wechat" placeholder="微信号">
+      </div>
+      <div class="form-group">
+        <label>谈判阶段</label>
+        <select id="cm-stage">
+          <option value="new_lead">初次接触</option>
+          <option value="quotation">报价中</option>
+          <option value="sample">样品跟进</option>
+          <option value="negotiation">订单谈判</option>
+          <option value="closed">已成交</option>
+          <option value="hold">暂停/流失</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>下次跟进日期</label>
+        <input type="date" id="cm-followup">
+      </div>
+      <div class="form-group">
+        <label>获客来源</label>
+        <select id="cm-source">
+          <option value="">— 请选择 —</option>
+          <option>展会</option><option>阿里巴巴</option><option>Google广告</option>
+          <option>LinkedIn</option><option>老客户介绍</option><option>主动开发</option>
+          <option>独立站</option><option>其他</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>常用报价币种</label>
+        <select id="cm-currency">
+          <option value="USD">USD 美元</option><option value="EUR">EUR 欧元</option>
+          <option value="GBP">GBP 英镑</option><option value="JPY">JPY 日元</option>
+          <option value="AUD">AUD 澳元</option><option value="CAD">CAD 加元</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>备注 / 客户特点</label>
+        <textarea id="cm-notes" placeholder="客户偏好、付款习惯、特殊要求等…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('customer-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Customer Detail Modal -->
+<div class="modal-overlay" id="customer-detail-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3>客户详情</h3>
+      <button class="modal-close" onclick="closeModal('customer-detail-modal')">&times;</button>
+    </div>
+    <div id="customer-detail-content"></div>
   </div>
 </div>
 
@@ -1198,6 +1415,29 @@ function toggleChartCur(cur) {
   renderRateChart();
 }
 
+// ── Currency helpers ──
+const CURRENCY_SYMBOLS = {CNY:'¥',USD:'$',EUR:'€',GBP:'£',JPY:'¥',AUD:'A$',CAD:'C$',HKD:'HK$',SGD:'S$'};
+function currSym(cur) { return CURRENCY_SYMBOLS[cur] || cur+' '; }
+
+function getCrossRate(quoteCur, costCur) {
+  if (!quoteCur || !costCur) return null;
+  if (quoteCur === costCur) return 1;
+  if (costCur === 'CNY') return liveRates[quoteCur] || null;
+  if (quoteCur === 'CNY') return liveRates[costCur] ? +(1/liveRates[costCur]).toFixed(6) : null;
+  const q = liveRates[quoteCur], c = liveRates[costCur];
+  return (q && c) ? +(q/c).toFixed(6) : null;
+}
+
+function updateCalcLabels() {
+  const quoteCur = document.getElementById('calc-currency')?.value || 'USD';
+  const costCur  = document.getElementById('calc-cost-currency')?.value || 'CNY';
+  const el = (id) => document.getElementById(id);
+  el('calc-rate-label')     && (el('calc-rate-label').textContent     = `汇率 (1 ${quoteCur} = ? ${costCur})`);
+  el('calc-price-label')    && (el('calc-price-label').textContent    = `目标报价 (${quoteCur}/件)`);
+  el('calc-cost-label')     && (el('calc-cost-label').textContent     = `采购价 (${costCur}/件)`);
+  el('calc-cost-cur-display') && (el('calc-cost-cur-display').textContent = `${costCur} ${CURRENCY_NAMES[costCur]||''}`);
+}
+
 function applyRate(currency) {
   const rate = liveRates[currency];
   if (!rate) return;
@@ -1210,11 +1450,13 @@ function applyRate(currency) {
 }
 
 function syncCalcRate() {
-  const cur = document.getElementById('calc-currency')?.value;
-  if (cur && liveRates[cur]) {
-    const el = document.getElementById('calc-rate');
-    if (el && !el._manualEdit) el.value = liveRates[cur].toFixed(4);
-  }
+  const quoteCur = document.getElementById('calc-currency')?.value;
+  const costCur  = document.getElementById('calc-cost-currency')?.value || 'CNY';
+  if (!quoteCur) return;
+  const rate = getCrossRate(quoteCur, costCur);
+  const el = document.getElementById('calc-rate');
+  if (el && rate !== null) { el.value = rate.toFixed(4); }
+  updateCalcLabels();
 }
 
 // Initial fetch + refresh every 5 minutes
@@ -1327,6 +1569,7 @@ let state = {
   products: [],
   quotes: [],
   quoteItems: [],
+  customers: [],
   settings: {},
   editingProductId: null
 };
@@ -1337,10 +1580,11 @@ function load() {
     const s = localStorage.getItem(key);
     if (s) Object.assign(state, JSON.parse(s));
   } catch(e) {}
-  if (!state.settings)    state.settings = {};
-  if (!state.products)    state.products = [];
-  if (!state.quotes)      state.quotes = [];
-  if (!state.quoteItems)  state.quoteItems = [];
+  if (!state.settings)   state.settings = {};
+  if (!state.products)   state.products = [];
+  if (!state.quotes)     state.quotes = [];
+  if (!state.quoteItems) state.quoteItems = [];
+  if (!state.customers)  state.customers = [];
 }
 
 function save() {
@@ -1351,18 +1595,19 @@ function save() {
 // ═══════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════
-const pageTitles = { dashboard:'总览', inventory:'库存管理', profit:'利润测算', quote:'报价单', settings:'公司设置' };
+const pageTitles = { dashboard:'总览', inventory:'库存管理', profit:'利润测算', quote:'报价单', customers:'客户管理', settings:'公司设置' };
 
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item')[['dashboard','inventory','profit','quote','settings'].indexOf(name)].classList.add('active');
+  document.querySelectorAll('.nav-item')[['dashboard','inventory','profit','quote','customers','settings'].indexOf(name)].classList.add('active');
   document.getElementById('page-title').textContent = pageTitles[name];
   if (name === 'dashboard') renderDashboard();
   if (name === 'inventory') renderInventory();
-  if (name === 'profit') renderCalcProducts();
+  if (name === 'profit') { renderCalcProducts(); updateCalcLabels(); }
   if (name === 'quote') { renderQuoteItems(); renderQuoteHistory(); initQuoteDefaults(); }
+  if (name === 'customers') renderCustomers();
   if (name === 'settings') loadSettings();
 }
 
@@ -1539,7 +1784,7 @@ function renderInventory() {
         ${p.spec?`<br><span style="font-size:11px;color:var(--text-secondary)">${escHtml(p.spec)}</span>`:''}
         ${hasSupplier?`<br><span class="supplier-chip">🤝 ${escHtml(p.supplier.name)}</span>`:''}
       </td>
-      <td>¥${(+p.cost).toFixed(2)}</td>
+      <td>${currSym(p.costCurrency||'CNY')}${(+p.cost).toFixed(2)} <span style="font-size:10px;color:var(--text-secondary)">${p.costCurrency||'CNY'}</span></td>
       <td style="font-weight:600">${p.stock}</td>
       <td>${p.unit}</td>
       <td>${warehouseHtml}</td>
@@ -1583,6 +1828,7 @@ function openProductModal(id) {
     document.getElementById('p-cost').value      = p.cost;
     document.getElementById('p-price').value     = p.price || '';
     document.getElementById('p-stock').value     = p.stock;
+    document.getElementById('p-cost-currency').value = p.costCurrency || 'CNY';
     document.getElementById('p-unit').value      = p.unit;
     document.getElementById('p-min-stock').value = p.minStock || '';
     document.getElementById('p-weight').value    = p.weight || '';
@@ -1615,6 +1861,7 @@ function openProductModal(id) {
     }
   } else {
     document.getElementById('product-modal-title').textContent = '新增产品';
+    document.getElementById('p-cost-currency').value = 'CNY';
     ['p-sku','p-name','p-spec','p-cost','p-price','p-stock','p-min-stock','p-weight',
      'p-warehouse','p-location','p-warehouse-note',
      'p-sup-name','p-sup-contact','p-sup-phone','p-sup-wechat','p-sup-email','p-sup-moq','p-sup-note',
@@ -1650,9 +1897,10 @@ function saveProduct() {
   }
 
   const data = {
-    sku:      document.getElementById('p-sku').value.trim(),
-    name, spec: document.getElementById('p-spec').value.trim(),
-    cost, price: parseFloat(document.getElementById('p-price').value) || 0,
+    sku:          document.getElementById('p-sku').value.trim(),
+    name, spec:   document.getElementById('p-spec').value.trim(),
+    costCurrency: document.getElementById('p-cost-currency').value || 'CNY',
+    cost, price:  parseFloat(document.getElementById('p-price').value) || 0,
     stock: isNaN(stock) ? 0 : stock,
     unit: document.getElementById('p-unit').value,
     minStock: parseInt(document.getElementById('p-min-stock').value) || 10,
@@ -1711,22 +1959,29 @@ function fillCalcFromProduct() {
   if (!p) return;
   document.getElementById('calc-name').value = p.name;
   document.getElementById('calc-cost').value = p.cost;
+  if (p.costCurrency) {
+    document.getElementById('calc-cost-currency').value = p.costCurrency;
+    syncCalcRate();
+  }
   if (p.price) document.getElementById('calc-price').value = p.price;
+  updateCalcLabels();
   calculate();
 }
 
 function calculate() {
-  const cost = parseFloat(document.getElementById('calc-cost').value) || 0;
-  const qty = parseFloat(document.getElementById('calc-qty').value) || 1;
-  const rate = parseFloat(document.getElementById('calc-rate').value) || 7.25;
-  const priceFC = parseFloat(document.getElementById('calc-price').value) || 0;
-  const shipping = parseFloat(document.getElementById('calc-shipping').value) || 0;
+  const cost      = parseFloat(document.getElementById('calc-cost').value) || 0;
+  const qty       = parseFloat(document.getElementById('calc-qty').value) || 1;
+  const rate      = parseFloat(document.getElementById('calc-rate').value) || 1;
+  const priceFC   = parseFloat(document.getElementById('calc-price').value) || 0;
+  const shipping  = parseFloat(document.getElementById('calc-shipping').value) || 0;
   const taxRebate = parseFloat(document.getElementById('calc-tax-rebate').value) || 0;
-  const vat = parseFloat(document.getElementById('calc-vat').value) || 13;
-  const commission = parseFloat(document.getElementById('calc-commission').value) || 0;
-  const misc = parseFloat(document.getElementById('calc-misc').value) || 0;
-  const currency = document.getElementById('calc-currency').value;
-  const incoterm = document.getElementById('calc-incoterm').value;
+  const vat       = parseFloat(document.getElementById('calc-vat').value) || 13;
+  const commission= parseFloat(document.getElementById('calc-commission').value) || 0;
+  const misc      = parseFloat(document.getElementById('calc-misc').value) || 0;
+  const currency  = document.getElementById('calc-currency')?.value || 'USD';
+  const costCur   = document.getElementById('calc-cost-currency')?.value || 'CNY';
+  const incoterm  = document.getElementById('calc-incoterm').value;
+  const sym       = currSym(costCur);
 
   if (!cost || !priceFC) {
     document.getElementById('calc-result-box').innerHTML = `
@@ -1737,55 +1992,47 @@ function calculate() {
     return;
   }
 
-  // Revenue in CNY per piece
-  const revenueCNY = priceFC * rate;
-  // Tax rebate income
-  const rebateIncome = cost * (taxRebate / 100);
-  // Commission cost
-  const commissionCost = revenueCNY * (commission / 100);
-  // Total cost per piece
-  const totalCost = cost + shipping + misc + commissionCost - rebateIncome;
-  // Profit per piece
-  const profitPerPiece = revenueCNY - totalCost;
-  // Profit margin
-  const margin = revenueCNY > 0 ? (profitPerPiece / revenueCNY * 100) : 0;
-  // Total for qty
-  const totalRevenue = revenueCNY * qty;
-  const totalProfit = profitPerPiece * qty;
-
-  // Suggest price for 20% margin
-  const suggestPrice20 = (totalCost / (1 - 0.20)) / rate;
-  const suggestPrice30 = (totalCost / (1 - 0.30)) / rate;
+  // Revenue in cost-currency per piece
+  const revenue   = priceFC * rate;
+  const rebate    = cost * (taxRebate / 100);
+  const commCost  = revenue * (commission / 100);
+  const totalCost = cost + shipping + misc + commCost - rebate;
+  const profit    = revenue - totalCost;
+  const margin    = revenue > 0 ? (profit / revenue * 100) : 0;
+  const totalRev  = revenue * qty;
+  const totalProfit = profit * qty;
+  const suggest20 = (totalCost / (1 - 0.20)) / rate;
+  const suggest30 = (totalCost / (1 - 0.30)) / rate;
 
   const profitColor = margin >= 20 ? '#34a853' : margin >= 10 ? '#fbbc04' : '#ea4335';
-  const marginIcon = margin >= 20 ? '↑' : margin >= 10 ? '→' : '↓';
+  const marginIcon  = margin >= 20 ? '↑' : margin >= 10 ? '→' : '↓';
 
   document.getElementById('calc-result-box').innerHTML = `
     <div class="calc-result">
-      <div style="font-size:13px;opacity:0.85;margin-bottom:4px">利润分析 · ${qty} 件 · ${incoterm} · ${currency}</div>
-      <div style="font-size:36px;font-weight:800;color:${profitColor === '#34a853' ? '#b9f6ca' : profitColor === '#fbbc04' ? '#fff9c4' : '#ffcdd2'}">${margin.toFixed(1)}%</div>
+      <div style="font-size:13px;opacity:0.85;margin-bottom:4px">利润分析 · ${qty} 件 · ${incoterm} · ${currency} → ${costCur}</div>
+      <div style="font-size:36px;font-weight:800;color:${profitColor==='#34a853'?'#b9f6ca':profitColor==='#fbbc04'?'#fff9c4':'#ffcdd2'}">${margin.toFixed(1)}%</div>
       <div style="font-size:13px;opacity:0.8;margin-bottom:16px">利润率 ${marginIcon}</div>
       <div class="calc-result-grid">
-        <div class="calc-result-item"><div class="label">单件报价收入 (¥)</div><div class="value">¥${revenueCNY.toFixed(2)}</div></div>
-        <div class="calc-result-item"><div class="label">单件净利润 (¥)</div><div class="value">¥${profitPerPiece.toFixed(2)}</div></div>
-        <div class="calc-result-item"><div class="label">总收入 (¥)</div><div class="value">¥${totalRevenue.toFixed(0)}</div></div>
-        <div class="calc-result-item"><div class="label">总利润 (¥)</div><div class="value">¥${totalProfit.toFixed(0)}</div></div>
+        <div class="calc-result-item"><div class="label">单件报价收入 (${costCur})</div><div class="value">${sym}${revenue.toFixed(2)}</div></div>
+        <div class="calc-result-item"><div class="label">单件净利润 (${costCur})</div><div class="value">${sym}${profit.toFixed(2)}</div></div>
+        <div class="calc-result-item"><div class="label">总收入 (${costCur})</div><div class="value">${sym}${totalRev.toFixed(0)}</div></div>
+        <div class="calc-result-item"><div class="label">总利润 (${costCur})</div><div class="value">${sym}${totalProfit.toFixed(0)}</div></div>
       </div>
     </div>
     <div class="calc-breakdown">
-      <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">成本明细 (单件)</div>
-      <div class="calc-breakdown-row"><span>采购成本</span><span>¥${cost.toFixed(2)}</span></div>
-      <div class="calc-breakdown-row"><span>运费/物流</span><span>¥${shipping.toFixed(2)}</span></div>
-      <div class="calc-breakdown-row"><span>佣金 (${commission}%)</span><span>¥${commissionCost.toFixed(2)}</span></div>
-      <div class="calc-breakdown-row"><span>其他杂费</span><span>¥${misc.toFixed(2)}</span></div>
-      <div class="calc-breakdown-row" style="color:var(--success)"><span>出口退税收入 (${taxRebate}%)</span><span>-¥${rebateIncome.toFixed(2)}</span></div>
-      <div class="calc-breakdown-row"><span>总成本</span><span>¥${totalCost.toFixed(2)}</span></div>
-      <div class="calc-breakdown-row"><span style="color:var(--primary)">报价收入</span><span style="color:var(--primary)">¥${revenueCNY.toFixed(2)}</span></div>
+      <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">成本明细 (单件 · ${costCur})</div>
+      <div class="calc-breakdown-row"><span>采购成本</span><span>${sym}${cost.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span>运费/物流</span><span>${sym}${shipping.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span>佣金 (${commission}%)</span><span>${sym}${commCost.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span>其他杂费</span><span>${sym}${misc.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row" style="color:var(--success)"><span>退税/优惠 (${taxRebate}%)</span><span>-${sym}${rebate.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span>总成本</span><span>${sym}${totalCost.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span style="color:var(--primary)">报价收入</span><span style="color:var(--primary)">${sym}${revenue.toFixed(2)}</span></div>
     </div>
     <div class="calc-breakdown" style="margin-top:12px">
       <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">参考报价</div>
-      <div class="calc-breakdown-row"><span>20% 利润率报价</span><span style="color:var(--success);font-weight:600">${currency} ${suggestPrice20.toFixed(2)}</span></div>
-      <div class="calc-breakdown-row"><span>30% 利润率报价</span><span style="color:var(--success);font-weight:600">${currency} ${suggestPrice30.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span>20% 利润率报价</span><span style="color:var(--success);font-weight:600">${currency} ${suggest20.toFixed(2)}</span></div>
+      <div class="calc-breakdown-row"><span>30% 利润率报价</span><span style="color:var(--success);font-weight:600">${currency} ${suggest30.toFixed(2)}</span></div>
     </div>
   `;
 }
@@ -2390,6 +2637,242 @@ function showTermInfo(key, event) {
 document.addEventListener('click', e => {
   if (!e.target.closest('.csd')) document.querySelectorAll('.csd.open').forEach(c=>c.classList.remove('open'));
 });
+
+// ═══════════════════════════════════════
+//  CUSTOMER MANAGEMENT
+// ═══════════════════════════════════════
+const STAGES = {
+  new_lead:    { label:'初次接触', color:'#64748b', bg:'#f1f5f9' },
+  quotation:   { label:'报价中',   color:'#1a73e8', bg:'#e8f0fe' },
+  sample:      { label:'样品跟进', color:'#f29900', bg:'#fef7e0' },
+  negotiation: { label:'订单谈判', color:'#9c27b0', bg:'#f3e5f5' },
+  closed:      { label:'已成交',   color:'#34a853', bg:'#e6f4ea' },
+  hold:        { label:'暂停/流失',color:'#ea4335', bg:'#fce8e6' },
+};
+const COUNTRY_LIST = [
+  ['🇺🇸','US','美国'],['🇬🇧','GB','英国'],['🇩🇪','DE','德国'],['🇫🇷','FR','法国'],
+  ['🇯🇵','JP','日本'],['🇦🇺','AU','澳大利亚'],['🇨🇦','CA','加拿大'],['🇮🇳','IN','印度'],
+  ['🇧🇷','BR','巴西'],['🇷🇺','RU','俄罗斯'],['🇰🇷','KR','韩国'],['🇮🇹','IT','意大利'],
+  ['🇪🇸','ES','西班牙'],['🇳🇱','NL','荷兰'],['🇸🇬','SG','新加坡'],['🇲🇾','MY','马来西亚'],
+  ['🇹🇭','TH','泰国'],['🇻🇳','VN','越南'],['🇮🇩','ID','印度尼西亚'],['🇵🇭','PH','菲律宾'],
+  ['🇲🇽','MX','墨西哥'],['🇦🇪','AE','阿联酋'],['🇸🇦','SA','沙特'],['🇿🇦','ZA','南非'],
+  ['🇹🇷','TR','土耳其'],['🇵🇱','PL','波兰'],['🇸🇪','SE','瑞典'],['🇨🇭','CH','瑞士'],
+  ['🇧🇪','BE','比利时'],['🇵🇹','PT','葡萄牙'],['🇦🇷','AR','阿根廷'],['🇨🇱','CL','智利'],
+  ['🇵🇰','PK','巴基斯坦'],['🇧🇩','BD','孟加拉'],['🇳🇬','NG','尼日利亚'],['🇪🇬','EG','埃及'],
+];
+let editingCustomerId = null;
+let customerView = 'kanban';
+
+function countryFlag(code) {
+  const c = COUNTRY_LIST.find(x=>x[1]===code);
+  return c ? c[0] : '🌍';
+}
+function countryName(code) {
+  const c = COUNTRY_LIST.find(x=>x[1]===code);
+  return c ? c[2] : code;
+}
+
+function switchCustomerView(v) {
+  customerView = v;
+  document.getElementById('customer-kanban').style.display = v==='kanban'?'flex':'none';
+  document.getElementById('customer-list').style.display   = v==='list'?'':'none';
+  document.getElementById('btn-kanban-view').className = v==='kanban'?'btn btn-outline btn-sm':'btn btn-ghost btn-sm';
+  document.getElementById('btn-list-view').className   = v==='list'?'btn btn-outline btn-sm':'btn btn-ghost btn-sm';
+  renderCustomers();
+}
+
+function renderCustomers() {
+  const q   = (document.getElementById('customer-search')||{value:''}).value.toLowerCase();
+  const sf  = (document.getElementById('customer-stage-filter')||{value:''}).value;
+  const list= (state.customers||[]).filter(c =>
+    (!q || c.company.toLowerCase().includes(q) || (c.contact||'').toLowerCase().includes(q) || (c.country||'').toLowerCase().includes(q) || countryName(c.country).includes(q)) &&
+    (!sf || c.stage===sf)
+  );
+
+  if (customerView==='kanban') renderKanban(list);
+  else renderCustomerList(list);
+}
+
+function renderKanban(list) {
+  const wrap = document.getElementById('customer-kanban');
+  wrap.innerHTML = Object.entries(STAGES).map(([key,s])=>{
+    const cards = list.filter(c=>c.stage===key);
+    const cardHtml = cards.length===0
+      ? `<div style="text-align:center;padding:20px;color:var(--text-secondary);font-size:12px">暂无客户</div>`
+      : cards.map(c=>{
+          const followupHtml = followupBadge(c.nextFollowup);
+          const prods = (c.productIds||[]).length;
+          return `<div class="customer-card" onclick="openCustomerDetail('${c.id}')" style="border-left-color:${s.color}">
+            <div class="customer-card-name">${countryFlag(c.country)} ${escHtml(c.company)}</div>
+            <div class="customer-card-contact">${escHtml(c.contact||'—')} · ${escHtml(c.source||'')}</div>
+            ${prods?`<div style="font-size:11px;color:var(--primary);margin-bottom:4px">📦 ${prods} 款产品</div>`:''}
+            <div class="customer-card-footer">
+              ${followupHtml}
+              <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:11px" onclick="event.stopPropagation();openCustomerModal('${c.id}')">编辑</button>
+            </div>
+          </div>`;
+        }).join('');
+    return `<div class="kanban-col">
+      <div class="kanban-col-header">
+        <span class="kanban-col-title" style="color:${s.color}">${s.label}</span>
+        <span class="kanban-count">${cards.length}</span>
+      </div>
+      ${cardHtml}
+    </div>`;
+  }).join('');
+}
+
+function renderCustomerList(list) {
+  const tbody = document.getElementById('customer-list-tbody');
+  if(!list.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty"><p>暂无客户数据</p></div></td></tr>`;return;}
+  tbody.innerHTML = list.map(c=>{
+    const s = STAGES[c.stage]||STAGES.new_lead;
+    return `<tr onclick="openCustomerDetail('${c.id}')" style="cursor:pointer">
+      <td><strong>${countryFlag(c.country)} ${escHtml(c.company)}</strong><br><span style="font-size:11px;color:var(--text-secondary)">${escHtml(c.contact||'')}</span></td>
+      <td>${countryName(c.country)}</td>
+      <td><span class="badge" style="background:${s.bg};color:${s.color}">${s.label}</span></td>
+      <td>${followupBadge(c.nextFollowup)}</td>
+      <td>${escHtml(c.source||'—')}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openCustomerModal('${c.id}')">编辑</button>
+          <button class="btn btn-sm" style="background:#fce8e6;color:var(--danger);margin-left:4px" onclick="event.stopPropagation();deleteCustomer('${c.id}')">删除</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function followupBadge(date) {
+  if (!date) return '<span class="followup-badge" style="color:var(--text-secondary)">未设置</span>';
+  const days = Math.round((new Date(date)-new Date())/86400000);
+  if (days < 0)    return `<span class="followup-badge followup-late">⚠ 已逾期 ${-days}天</span>`;
+  if (days <= 3)   return `<span class="followup-badge followup-soon">⏰ ${days}天后</span>`;
+  return `<span class="followup-badge followup-ok">📅 ${date}</span>`;
+}
+
+function openCustomerModal(id) {
+  editingCustomerId = id || null;
+  const modal = document.getElementById('customer-modal');
+  if (!modal) return buildCustomerModal(id);
+  if (id) {
+    const c = (state.customers||[]).find(x=>x.id===id);
+    if (!c) return;
+    document.getElementById('cm-company').value  = c.company||'';
+    document.getElementById('cm-contact').value  = c.contact||'';
+    document.getElementById('cm-country').value  = c.country||'';
+    document.getElementById('cm-phone').value    = c.phone||'';
+    document.getElementById('cm-email').value    = c.email||'';
+    document.getElementById('cm-whatsapp').value = c.whatsapp||'';
+    document.getElementById('cm-wechat').value   = c.wechat||'';
+    document.getElementById('cm-stage').value    = c.stage||'new_lead';
+    document.getElementById('cm-followup').value = c.nextFollowup||'';
+    document.getElementById('cm-source').value   = c.source||'';
+    document.getElementById('cm-currency').value = c.currency||'USD';
+    document.getElementById('cm-notes').value    = c.notes||'';
+  } else {
+    ['cm-company','cm-contact','cm-phone','cm-email','cm-whatsapp','cm-wechat','cm-notes','cm-source'].forEach(fid=>document.getElementById(fid).value='');
+    document.getElementById('cm-stage').value    = 'new_lead';
+    document.getElementById('cm-currency').value = 'USD';
+    document.getElementById('cm-followup').value = '';
+    document.getElementById('cm-country').value  = '';
+  }
+  modal.classList.add('show');
+}
+
+function saveCustomer() {
+  const company = document.getElementById('cm-company').value.trim();
+  if (!company) return alert('请填写公司/客户名称');
+  const data = {
+    company, contact:   document.getElementById('cm-contact').value.trim(),
+    country: document.getElementById('cm-country').value,
+    phone:   document.getElementById('cm-phone').value.trim(),
+    email:   document.getElementById('cm-email').value.trim(),
+    whatsapp:document.getElementById('cm-whatsapp').value.trim(),
+    wechat:  document.getElementById('cm-wechat').value.trim(),
+    stage:   document.getElementById('cm-stage').value,
+    nextFollowup: document.getElementById('cm-followup').value,
+    source:  document.getElementById('cm-source').value.trim(),
+    currency:document.getElementById('cm-currency').value,
+    notes:   document.getElementById('cm-notes').value.trim(),
+  };
+  if (!state.customers) state.customers = [];
+  if (editingCustomerId) {
+    const idx = state.customers.findIndex(c=>c.id===editingCustomerId);
+    if (idx>=0) state.customers[idx] = {...state.customers[idx], ...data};
+  } else {
+    data.id = 'c_'+Date.now();
+    data.history = [];
+    data.createdAt = new Date().toISOString().split('T')[0];
+    state.customers.push(data);
+  }
+  save();
+  closeModal('customer-modal');
+  renderCustomers();
+}
+
+function deleteCustomer(id) {
+  if (!confirm('确认删除此客户？')) return;
+  state.customers = (state.customers||[]).filter(c=>c.id!==id);
+  save(); renderCustomers();
+}
+
+function openCustomerDetail(id) {
+  const c = (state.customers||[]).find(x=>x.id===id);
+  if (!c) return;
+  const s = STAGES[c.stage]||STAGES.new_lead;
+  const products = (c.productIds||[]).map(pid=>{
+    const p = (state.products||[]).find(x=>x.id===pid);
+    return p ? escHtml(p.name) : '';
+  }).filter(Boolean).join('、');
+
+  const histHtml = (c.history||[]).length===0
+    ? '<div style="color:var(--text-secondary);font-size:13px;padding:8px">暂无跟进记录</div>'
+    : [...(c.history||[])].reverse().map(h=>`
+        <div class="history-entry">
+          <div class="history-entry-date">${h.date}</div>
+          <div class="history-entry-text">${escHtml(h.content)}</div>
+        </div>`).join('');
+
+  document.getElementById('customer-detail-content').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+      <div>
+        <div style="font-size:20px;font-weight:700">${countryFlag(c.country)} ${escHtml(c.company)}</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-top:2px">${countryName(c.country)} · ${escHtml(c.contact||'')}</div>
+      </div>
+      <span class="badge" style="background:${s.bg};color:${s.color};font-size:13px;padding:4px 12px">${s.label}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;font-size:13px">
+      ${c.phone?`<div>📞 ${escHtml(c.phone)}</div>`:''}
+      ${c.email?`<div>✉️ <a href="mailto:${escHtml(c.email)}" style="color:var(--primary)">${escHtml(c.email)}</a></div>`:''}
+      ${c.whatsapp?`<div>💬 WhatsApp: ${escHtml(c.whatsapp)}</div>`:''}
+      ${c.wechat?`<div>🟢 微信: ${escHtml(c.wechat)}</div>`:''}
+      ${c.source?`<div>🔗 来源: ${escHtml(c.source)}</div>`:''}
+      ${c.currency?`<div>💱 常用币种: ${c.currency}</div>`:''}
+      ${c.nextFollowup?`<div style="grid-column:1/-1">${followupBadge(c.nextFollowup)}</div>`:''}
+    </div>
+    ${products?`<div style="margin-bottom:12px;font-size:13px">📦 感兴趣产品：${products}</div>`:''}
+    ${c.notes?`<div style="background:var(--bg);padding:10px 12px;border-radius:6px;font-size:13px;margin-bottom:16px;line-height:1.6">${escHtml(c.notes)}</div>`:''}
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">跟进记录</div>
+    ${histHtml}
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <textarea id="new-history-text" rows="2" placeholder="记录本次跟进内容…" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:none;font-family:inherit"></textarea>
+      <button class="btn btn-primary" style="align-self:flex-end" onclick="addFollowupRecord('${c.id}')">添加记录</button>
+    </div>
+    <div style="margin-top:12px;text-align:right">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('customer-detail-modal');openCustomerModal('${c.id}')">✏️ 编辑资料</button>
+    </div>
+  `;
+  document.getElementById('customer-detail-modal').classList.add('show');
+}
+
+function addFollowupRecord(customerId) {
+  const text = document.getElementById('new-history-text').value.trim();
+  if (!text) return;
+  const c = (state.customers||[]).find(x=>x.id===customerId);
+  if (!c) return;
+  if (!c.history) c.history = [];
+  c.history.push({ date: new Date().toISOString().split('T')[0], content: text });
+  save();
+  openCustomerDetail(customerId); // refresh
+}
 
 // ═══════════════════════════════════════
 //  INIT
