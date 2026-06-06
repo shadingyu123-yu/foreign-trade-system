@@ -671,6 +671,12 @@
               <div class="card-title">买家信息</div>
               <div class="form-grid">
                 <div class="form-group" style="grid-column:1/-1">
+                  <label>从已有客户选择（也可在下方自定义编辑）</label>
+                  <select id="q-buyer-select" onchange="applyQuoteCustomer()">
+                    <option value="">— 自定义填写 —</option>
+                  </select>
+                </div>
+                <div class="form-group" style="grid-column:1/-1">
                   <label>客户公司名</label>
                   <input type="text" id="q-buyer-name" placeholder="Company Name">
                 </div>
@@ -1004,6 +1010,10 @@
           <input type="number" id="p-sup-moq" placeholder="100">
         </div>
         <div class="form-group" style="grid-column:1/-1">
+          <label>详细地址</label>
+          <input type="text" id="p-sup-address" placeholder="省 / 市 / 区 / 街道门牌等详细地址">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
           <label>供应商备注</label>
           <textarea id="p-sup-note" placeholder="账期、交货周期、合作细节等..."></textarea>
         </div>
@@ -1074,6 +1084,10 @@
       <div class="form-group" style="grid-column:1/-1">
         <label>公司 / 客户名称 *</label>
         <input type="text" id="cm-company" placeholder="公司名称或个人姓名">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>详细地址</label>
+        <input type="text" id="cm-address" placeholder="Address, City, Country">
       </div>
       <div class="form-group">
         <label>联系人</label>
@@ -1621,7 +1635,7 @@ function showPage(name) {
   if (name === 'dashboard') renderDashboard();
   if (name === 'inventory') renderInventory();
   if (name === 'profit') { renderCalcProducts(); updateCalcLabels(); }
-  if (name === 'quote') { renderQuoteItems(); renderQuoteHistory(); initQuoteDefaults(); }
+  if (name === 'quote') { renderQuoteItems(); renderQuoteHistory(); initQuoteDefaults(); renderQuoteCustomerOptions(); }
   if (name === 'customers') renderCustomers();
   if (name === 'settings') loadSettings();
 }
@@ -1859,6 +1873,7 @@ function openProductModal(id) {
     document.getElementById('p-sup-wechat').value  = s.wechat || '';
     document.getElementById('p-sup-email').value   = s.email || '';
     document.getElementById('p-sup-moq').value     = s.moq || '';
+    document.getElementById('p-sup-address').value = s.address || '';
     document.getElementById('p-sup-note').value    = s.note || '';
     // Media - image
     if (p.image) {
@@ -1879,7 +1894,7 @@ function openProductModal(id) {
     document.getElementById('p-cost-currency').value = 'CNY';
     ['p-sku','p-name','p-spec','p-cost','p-price','p-stock','p-min-stock','p-weight',
      'p-warehouse','p-location','p-warehouse-note',
-     'p-sup-name','p-sup-contact','p-sup-phone','p-sup-wechat','p-sup-email','p-sup-moq','p-sup-note',
+     'p-sup-name','p-sup-contact','p-sup-phone','p-sup-wechat','p-sup-email','p-sup-moq','p-sup-address','p-sup-note',
      'p-manual-url'].forEach(fid => document.getElementById(fid).value = '');
     document.getElementById('p-unit').value  = 'PCS';
     document.getElementById('p-stock').value = 0;
@@ -1932,6 +1947,7 @@ function saveProduct() {
       wechat:  document.getElementById('p-sup-wechat').value.trim(),
       email:   document.getElementById('p-sup-email').value.trim(),
       moq:     document.getElementById('p-sup-moq').value.trim(),
+      address: document.getElementById('p-sup-address').value.trim(),
       note:    document.getElementById('p-sup-note').value.trim(),
     },
     // Media
@@ -2303,6 +2319,34 @@ function renderQuoteHistory() {
   `).join('');
 }
 
+// 报价单：填充“从已有客户选择”下拉
+function renderQuoteCustomerOptions() {
+  const sel = document.getElementById('q-buyer-select');
+  if (!sel) return;
+  const prev = sel.value;
+  const opts = ['<option value="">— 自定义填写 —</option>']
+    .concat((state.customers||[]).map(c =>
+      `<option value="${c.id}">${escHtml(c.company)}${c.country?` (${escHtml(countryName(c.country))})`:''}</option>`
+    ));
+  sel.innerHTML = opts.join('');
+  // 保留之前的选择（若该客户仍存在）
+  if (prev && (state.customers||[]).some(c=>c.id===prev)) sel.value = prev;
+}
+
+// 选择客户后，自动带入买家信息（仍可手动修改）
+function applyQuoteCustomer() {
+  const id = document.getElementById('q-buyer-select').value;
+  if (!id) return; // 选择“自定义填写”时不清空，保留当前内容
+  const c = (state.customers||[]).find(x=>x.id===id);
+  if (!c) return;
+  document.getElementById('q-buyer-name').value    = c.company || '';
+  document.getElementById('q-buyer-addr').value    = c.address || '';
+  document.getElementById('q-buyer-contact').value = c.contact || '';
+  document.getElementById('q-buyer-email').value   = c.email || '';
+  // 若客户设置了常用币种，一并带入
+  if (c.currency) setCSD('csd-q-currency', c.currency);
+}
+
 function loadQuote(number) {
   const record = state.quotes.find(q => q.number === number);
   if (!record) return;
@@ -2313,6 +2357,8 @@ function loadQuote(number) {
   setCSD('csd-q-currency', q.currency);
   setCSD('csd-q-incoterm', q.incoterm);
   setCSD('csd-q-payment',  q.payment);
+  const qsel = document.getElementById('q-buyer-select');
+  if (qsel) qsel.value = '';
   document.getElementById('q-buyer-name').value = q.buyer.name;
   document.getElementById('q-buyer-addr').value = q.buyer.addr;
   document.getElementById('q-buyer-contact').value = q.buyer.contact;
@@ -2853,6 +2899,7 @@ function openCustomerModal(id) {
     const c = (state.customers||[]).find(x=>x.id===id);
     if (!c) return;
     document.getElementById('cm-company').value  = c.company||'';
+    document.getElementById('cm-address').value  = c.address||'';
     document.getElementById('cm-contact').value  = c.contact||'';
     document.getElementById('cm-country').value  = c.country||'';
     document.getElementById('cm-phone').value    = c.phone||'';
@@ -2865,7 +2912,7 @@ function openCustomerModal(id) {
     document.getElementById('cm-currency').value = c.currency||'USD';
     document.getElementById('cm-notes').value    = c.notes||'';
   } else {
-    ['cm-company','cm-contact','cm-phone','cm-email','cm-whatsapp','cm-wechat','cm-notes','cm-source'].forEach(fid=>document.getElementById(fid).value='');
+    ['cm-company','cm-address','cm-contact','cm-phone','cm-email','cm-whatsapp','cm-wechat','cm-notes','cm-source'].forEach(fid=>document.getElementById(fid).value='');
     document.getElementById('cm-stage').value    = 'new_lead';
     document.getElementById('cm-currency').value = 'USD';
     document.getElementById('cm-followup').value = '';
@@ -2879,6 +2926,7 @@ function saveCustomer() {
   if (!company) return alert('请填写公司/客户名称');
   const data = {
     company, contact:   document.getElementById('cm-contact').value.trim(),
+    address: document.getElementById('cm-address').value.trim(),
     country: document.getElementById('cm-country').value,
     phone:   document.getElementById('cm-phone').value.trim(),
     email:   document.getElementById('cm-email').value.trim(),
@@ -2943,6 +2991,7 @@ function openCustomerDetail(id) {
       ${c.wechat?`<div>🟢 微信: ${escHtml(c.wechat)}</div>`:''}
       ${c.source?`<div>🔗 来源: ${escHtml(c.source)}</div>`:''}
       ${c.currency?`<div>💱 常用币种: ${c.currency}</div>`:''}
+      ${c.address?`<div style="grid-column:1/-1">📍 ${escHtml(c.address)}</div>`:''}
       ${c.nextFollowup?`<div style="grid-column:1/-1">${followupBadge(c.nextFollowup)}</div>`:''}
     </div>
     ${products?`<div style="margin-bottom:12px;font-size:13px">📦 感兴趣产品：${products}</div>`:''}
