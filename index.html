@@ -546,7 +546,7 @@
         <div>
           <div class="card" style="margin-bottom:16px">
             <div class="card-title">基本信息</div>
-            <div class="form-grid">
+            <div class="form-grid" style="grid-template-columns:1fr 1fr">
               <div class="form-group">
                 <label>选择产品（可选）</label>
                 <select id="calc-product" onchange="fillCalcFromProduct()">
@@ -557,26 +557,24 @@
                 <label>产品名称</label>
                 <input type="text" id="calc-name" placeholder="产品描述">
               </div>
-              <div class="form-group">
-                <label id="calc-cost-label">采购价 (¥/件)</label>
-                <div style="display:flex;gap:6px">
-                  <select id="calc-cost-currency" onchange="syncCalcRate();updateCalcLabels();calculate()" style="flex-shrink:0;width:130px">
-                    <option value="CNY">CNY 人民币</option>
-                    <option value="USD">USD 美元</option>
-                    <option value="EUR">EUR 欧元</option>
-                    <option value="GBP">GBP 英镑</option>
-                    <option value="JPY">JPY 日元</option>
-                    <option value="AUD">AUD 澳元</option>
-                    <option value="CAD">CAD 加元</option>
-                    <option value="HKD">HKD 港元</option>
-                    <option value="SGD">SGD 新元</option>
+              <div class="form-group" style="grid-column:1/-1">
+                <label id="calc-cost-label">采购价（货币 / 每件）</label>
+                <div style="display:flex;gap:8px;align-items:stretch">
+                  <select id="calc-cost-currency" onchange="syncCalcRate();updateCalcLabels();calculate()" style="flex-shrink:0;width:150px">
+                    <option value="CNY">¥ CNY 人民币</option>
+                    <option value="USD">$ USD 美元</option>
+                    <option value="EUR">€ EUR 欧元</option>
+                    <option value="GBP">£ GBP 英镑</option>
+                    <option value="JPY">¥ JPY 日元</option>
+                    <option value="AUD">A$ AUD 澳元</option>
+                    <option value="CAD">C$ CAD 加元</option>
+                    <option value="HKD">HK$ HKD 港元</option>
+                    <option value="SGD">S$ SGD 新元</option>
                   </select>
                   <input type="number" id="calc-cost" placeholder="0.00" oninput="calculate()" style="flex:1">
+                  <div style="display:flex;align-items:center;color:var(--text-secondary);font-size:13px;white-space:nowrap">× 数量</div>
+                  <input type="number" id="calc-qty" placeholder="1" value="1" oninput="calculate()" style="width:80px">
                 </div>
-              </div>
-              <div class="form-group">
-                <label>数量</label>
-                <input type="number" id="calc-qty" placeholder="1" value="1" oninput="calculate()">
               </div>
             </div>
           </div>
@@ -611,12 +609,14 @@
               </div>
               <div class="form-group">
                 <label>贸易条款</label>
-                <div style="display:flex;gap:6px">
-                  <select id="calc-incoterm" onchange="calculate()" style="flex:1">
-                    <option>FOB</option><option>CIF</option><option>EXW</option><option>CFR</option><option>DDP</option>
-                  </select>
-                  <button class="csd-info-btn" onclick="showTermInfo(document.getElementById('calc-incoterm').value,event)" title="查看贸易条款说明">▲</button>
+                <div class="csd" id="csd-calc-incoterm">
+                  <div class="csd-trigger" onclick="toggleCSD('csd-calc-incoterm')">
+                    <span class="csd-label" id="csd-calc-incoterm-label">FOB · 离岸价</span>
+                    <span class="csd-arrow">▾</span>
+                  </div>
+                  <div class="csd-list" id="csd-calc-incoterm-list"></div>
                 </div>
+                <input type="hidden" id="calc-incoterm" value="FOB">
               </div>
             </div>
           </div>
@@ -887,7 +887,7 @@
 
     <!-- Tab: 基本信息 -->
     <div id="ptab-basic" class="modal-tab-pane active">
-      <div class="form-grid">
+      <div class="form-grid" style="grid-template-columns:1fr 1fr">
         <div class="form-group">
           <label>货号 / SKU</label>
           <input type="text" id="p-sku" placeholder="SKU-001">
@@ -900,25 +900,25 @@
           <label>规格描述</label>
           <input type="text" id="p-spec" placeholder="尺寸、颜色、材质等">
         </div>
-        <div class="form-group">
+        <div class="form-group" style="grid-column:1/-1">
           <label>采购价 *</label>
-          <div style="display:flex;gap:6px">
-            <select id="p-cost-currency" style="width:110px;flex-shrink:0">
-              <option value="CNY">¥ CNY</option>
-              <option value="USD">$ USD</option>
-              <option value="EUR">€ EUR</option>
-              <option value="GBP">£ GBP</option>
-              <option value="JPY">¥ JPY</option>
-              <option value="AUD">A$ AUD</option>
-              <option value="CAD">C$ CAD</option>
-              <option value="HKD">HK$ HKD</option>
-              <option value="SGD">S$ SGD</option>
+          <div style="display:flex;gap:8px">
+            <select id="p-cost-currency" style="width:130px;flex-shrink:0">
+              <option value="CNY">¥ CNY 人民币</option>
+              <option value="USD">$ USD 美元</option>
+              <option value="EUR">€ EUR 欧元</option>
+              <option value="GBP">£ GBP 英镑</option>
+              <option value="JPY">¥ JPY 日元</option>
+              <option value="AUD">A$ AUD 澳元</option>
+              <option value="CAD">C$ CAD 加元</option>
+              <option value="HKD">HK$ HKD 港元</option>
+              <option value="SGD">S$ SGD 新元</option>
             </select>
             <input type="number" id="p-cost" placeholder="0.00" step="0.01" style="flex:1">
           </div>
         </div>
         <div class="form-group">
-          <label>建议报价 (外币)</label>
+          <label>建议报价 (外币/件)</label>
           <input type="number" id="p-price" placeholder="0.00" step="0.01">
         </div>
         <div class="form-group">
@@ -939,6 +939,9 @@
         <div class="form-group">
           <label>净重 (kg/件)</label>
           <input type="number" id="p-weight" placeholder="0.000" step="0.001">
+        </div>
+        <div class="form-group">
+          <!-- 占位，保持对齐 -->
         </div>
       </div>
     </div>
@@ -2567,6 +2570,15 @@ function initCSDLists() {
   const iList = document.getElementById('csd-q-incoterm-list');
   if (iList) iList.innerHTML = CSD_INCOTERMS.map(t =>
     `<div class="csd-item${t.value==='FOB'?' selected':''}" onclick="pickCSD('csd-q-incoterm','${t.value}','${t.label}')">
+       <span class="csd-item-label">
+         ${t.label}<br><span class="csd-item-sub">${t.sub}</span>
+       </span>
+       <button class="csd-info-btn" onclick="showTermInfo('${t.key}',event)" title="查看说明">▲</button>
+     </div>`).join('');
+  // 利润测算-贸易条款
+  const ciList = document.getElementById('csd-calc-incoterm-list');
+  if (ciList) ciList.innerHTML = CSD_INCOTERMS.map(t =>
+    `<div class="csd-item${t.value==='FOB'?' selected':''}" onclick="pickCSD('csd-calc-incoterm','${t.value}','${t.label}');calculate()">
        <span class="csd-item-label">
          ${t.label}<br><span class="csd-item-sub">${t.sub}</span>
        </span>
