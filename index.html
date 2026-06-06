@@ -401,7 +401,7 @@
           onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <button class="btn btn-primary" style="width:100%;padding:11px;font-size:14px" onclick="doLogin()">登 录</button>
-      <div class="auth-hint">没有账号？点击上方「注册」创建<br>数据仅存储在您本人的浏览器中</div>
+      <div class="auth-hint">没有账号？点击上方「注册」创建<br>数据仅存储在您本人的浏览器中<br>更换电脑或清除缓存前，请到「公司设置」导出备份</div>
     </div>
 
     <!-- 注册表单 -->
@@ -830,6 +830,18 @@
         <div style="margin-top:16px">
           <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
         </div>
+      </div>
+
+      <!-- 数据备份与恢复 -->
+      <div class="card" style="max-width:600px;margin-top:20px">
+        <div class="card-title">数据备份与恢复</div>
+        <div class="alert alert-info">数据仅保存在本浏览器中。更换电脑或清除浏览器记录前，请先「导出」备份文件；在新设备上「导入」即可恢复全部产品、报价、客户与公司信息。</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+          <button class="btn btn-primary" onclick="exportData()">⬇ 导出数据</button>
+          <button class="btn btn-outline" onclick="document.getElementById('import-file').click()">⬆ 导入数据</button>
+          <input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importData(this)">
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:10px">导入将<strong>覆盖</strong>当前账号的全部数据，请确保已选择正确的备份文件。</div>
       </div>
     </div>
 
@@ -2461,6 +2473,80 @@ function saveSettings() {
   };
   save();
   alert('设置已保存');
+}
+
+// ═══════════════════════════════════════
+//  数据导出 / 导入
+// ═══════════════════════════════════════
+function exportData() {
+  const payload = {
+    app: '鱼市Pro',
+    type: 'backup',
+    version: 1,
+    user: currentUser || '',
+    exportedAt: new Date().toISOString(),
+    data: {
+      products:   state.products   || [],
+      quotes:     state.quotes     || [],
+      quoteItems: state.quoteItems || [],
+      customers:  state.customers  || [],
+      settings:   state.settings   || {},
+    }
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `鱼市Pro备份_${currentUser || 'data'}_${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function importData(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    let parsed;
+    try {
+      parsed = JSON.parse(e.target.result);
+    } catch (err) {
+      alert('导入失败：文件格式无效，不是有效的 JSON 备份文件。');
+      input.value = '';
+      return;
+    }
+    // 兼容：既支持带包装的备份文件，也支持直接的 state 对象
+    const d = (parsed && parsed.data) ? parsed.data : parsed;
+    if (!d || typeof d !== 'object' ||
+        !('products' in d || 'quotes' in d || 'customers' in d || 'settings' in d)) {
+      alert('导入失败：文件内容不是鱼市Pro的备份数据。');
+      input.value = '';
+      return;
+    }
+    const counts = `产品 ${(d.products||[]).length} 条、报价 ${(d.quotes||[]).length} 条、客户 ${(d.customers||[]).length} 条`;
+    if (!confirm(`确定要导入吗？\n\n将用备份文件（${counts}）覆盖当前账号的全部数据，此操作不可撤销。`)) {
+      input.value = '';
+      return;
+    }
+    state.products   = Array.isArray(d.products)   ? d.products   : [];
+    state.quotes     = Array.isArray(d.quotes)     ? d.quotes     : [];
+    state.quoteItems = Array.isArray(d.quoteItems) ? d.quoteItems : [];
+    state.customers  = Array.isArray(d.customers)  ? d.customers  : [];
+    state.settings   = (d.settings && typeof d.settings === 'object') ? d.settings : {};
+    state.editingProductId = null;
+    save();
+    input.value = '';
+    alert('导入成功！数据已恢复。');
+    location.reload();
+  };
+  reader.onerror = function() {
+    alert('导入失败：无法读取文件。');
+    input.value = '';
+  };
+  reader.readAsText(file);
 }
 
 // ═══════════════════════════════════════
