@@ -63,7 +63,9 @@
   .rate-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
   .help-tip { display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; border-radius:50%; background:#94a3b8; color:#fff; font-size:10px; font-weight:700; cursor:help; margin-left:5px; vertical-align:middle; position:relative; font-style:normal; }
   .help-tip:hover { background:#1d4ed8; }
-  .help-tip:hover::after { content:attr(data-tip); position:absolute; bottom:135%; left:50%; transform:translateX(-50%); background:#1f2937; color:#fff; font-size:11px; font-weight:400; line-height:1.65; padding:9px 11px; border-radius:7px; width:240px; z-index:60; text-align:left; box-shadow:0 6px 18px rgba(0,0,0,.22); }
+  .help-tip:hover::after { content:attr(data-tip); position:absolute; bottom:150%; left:-6px; background:#1f2937; color:#fff; font-size:11px; font-weight:400; line-height:1.65; padding:9px 11px; border-radius:7px; width:240px; max-width:78vw; z-index:60; text-align:left; box-shadow:0 6px 18px rgba(0,0,0,.22); pointer-events:none; }
+  /* 标题右半区/靠右的问号，提示向左展开，避免溢出右边 */
+  .help-tip.tip-left:hover::after { left:auto; right:-6px; }
   .rate-card:hover { border-color: var(--primary); background: #f0f7ff; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(26,115,232,0.12); }
   .rc-cur { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 1px; }
   .rc-name { font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; }
@@ -511,8 +513,8 @@
       <div class="card" style="margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
           <div>
-            <span class="card-title" style="margin:0">今日待办 · 指挥中心</span>
-            <span style="font-size:11px;color:var(--text-secondary);margin-left:8px">需要你处理的事，一处看全 · 点标题区可进入对应模块</span>
+            <span class="card-title" style="margin:0">今日待办 · 指挥中心<i class="help-tip" data-tip="汇总需要你处理的待办：待跟进客户、报价到期、库存预警、待收货采购单、待收尾款订单。点每块标题进入对应模块处理。">?</i></span>
+            <span style="font-size:11px;color:var(--text-secondary);margin-left:8px">需要你处理的事，一处看全</span>
           </div>
           <button class="btn btn-outline btn-sm" onclick="openReminderCenter()">⤢ 跟进/报价详情</button>
         </div>
@@ -522,11 +524,11 @@
       <!-- 汇率换算器 + 客户销售漏斗 -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px">
         <div class="card">
-          <div class="card-title">汇率换算器</div>
+          <div class="card-title">汇率换算器<i class="help-tip" data-tip="输入金额并选择来源/目标币种即可换算，默认转人民币。汇率取自实时数据，点 ⇅ 可一键互换两种货币。">?</i></div>
           <div id="fx-converter"></div>
         </div>
         <div class="card">
-          <div class="card-title">客户销售漏斗</div>
+          <div class="card-title">客户销售漏斗<i class="help-tip" data-tip="按谈判阶段统计客户数量，条形越长该阶段客户越多；底部显示客户总数与成交率。点任意一行进入客户管理。">?</i></div>
           <div id="sales-funnel"></div>
         </div>
       </div>
@@ -588,14 +590,13 @@
       <div id="inv-tab-ledger" style="display:none">
         <div class="card">
           <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
-            <div class="card-title" style="margin:0">出入库流水</div>
+            <div class="card-title" style="margin:0">出入库流水<i class="help-tip" data-tip="下订单会自动扣库存、采购收货自动入库、手动调整也会记在这里。每一笔变动都有时间、数量和结存，可追溯。">?</i></div>
             <select id="ledger-product-filter" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="renderLedger()"><option value="">全部产品</option></select>
             <select id="ledger-type-filter" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="renderLedger()">
               <option value="">全部类型</option><option value="in">入库</option><option value="out">出库</option>
             </select>
             <button class="btn btn-primary" style="margin-left:auto" onclick="openMoveModal()">+ 手动出入库</button>
           </div>
-          <div class="alert alert-info">下订单自动扣减库存、采购收货自动入库、手动调整也会记录在此，每一笔变动可追溯。</div>
           <div class="table-wrapper">
             <table>
               <thead><tr><th>时间</th><th>产品</th><th>类型</th><th>数量</th><th>结存</th><th>原因 / 来源</th></tr></thead>
@@ -914,7 +915,6 @@
             <button class="btn btn-success" style="margin-left:auto" onclick="generateRestockPO()">⚡ 按库存预警生成</button>
             <button class="btn btn-primary" onclick="openPurchaseModal()">+ 新建采购单</button>
           </div>
-          <div class="alert alert-info">向供应商下采购单，点击「收货入库」后自动增加库存并记录出入库流水，形成「预警 → 补货 → 入库」闭环。</div>
           <div class="table-wrapper">
             <table>
               <thead><tr><th>采购单号</th><th>供应商</th><th>金额</th><th>状态</th><th>预计到货</th><th>操作</th></tr></thead>
@@ -928,12 +928,11 @@
       <div id="pur-tab-suppliers" style="display:none">
         <div class="card">
           <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
-            <div class="card-title" style="margin:0">供应商库</div>
+            <div class="card-title" style="margin:0">供应商库<i class="help-tip" data-tip="集中管理供应商档案；新建采购单时可直接从这里下拉选择供应商，不用每次手填。点「从产品同步供应商」可一键导入产品里已填的供应商。">?</i></div>
             <input type="text" id="supplier-search" placeholder="搜索供应商、联系人…" style="width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px" oninput="renderSuppliers()">
             <button class="btn btn-outline" style="margin-left:auto" onclick="syncSuppliersFromProducts()">↻ 从产品同步供应商</button>
             <button class="btn btn-primary" onclick="openSupplierModal()">+ 新建供应商</button>
           </div>
-          <div class="alert alert-info">集中管理供应商档案。新建采购单时可直接从这里选择供应商，无需每次手填。</div>
           <div class="table-wrapper">
             <table>
               <thead><tr><th>供应商 / 联系人</th><th>电话</th><th>微信 / 邮箱</th><th>MOQ / 账期</th><th>操作</th></tr></thead>
@@ -1061,6 +1060,7 @@
           <button class="btn btn-outline" onclick="document.getElementById('import-file').click()">⬆ 导入数据</button>
           <input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importData(this)">
         </div>
+        <div id="backup-status" style="font-size:12px;color:var(--text-secondary);margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"></div>
         <div style="font-size:12px;color:var(--text-secondary);margin-top:10px">导入将<strong>覆盖</strong>当前账号的全部数据，请确保已选择正确的备份文件。</div>
       </div>
     </div>
@@ -2110,8 +2110,8 @@ function loginSuccess(username) {
   document.getElementById('sidebar-username').textContent = username;
   // Reset & reload state for this user
   state = { products:[], quotes:[], quoteItems:[], settings:{}, editingProductId:null };
-  load();
-  renderDashboard();
+  _blobWritten = {}; // 切换账号：清空大文件写入缓存
+  load().then(() => { renderDashboard(); checkBackupReminder(); });
 }
 
 function doLogout() {
@@ -2156,7 +2156,110 @@ let state = {
   editingProductId: null
 };
 
-function load() {
+// ═══════════════════════════════════════
+//  大文件存储（IndexedDB）
+//  localStorage 只存文本结构数据；产品图片 / PDF 说明书 / Logo / 印章
+//  这些大块 base64 迁到 IndexedDB，容量从 ~5MB 提升到磁盘级（GB）。
+//  内存中字段名不变(image/manualFile/logo/stamp)，渲染与 PDF 仍同步读取。
+// ═══════════════════════════════════════
+let _idb = null;
+let _blobWritten = {}; // 已写入 IDB 的值（按 key 缓存），避免重复写同一份大文件
+
+function idbOpen() {
+  if (_idb) return Promise.resolve(_idb);
+  return new Promise((resolve, reject) => {
+    let req;
+    try { req = indexedDB.open('fts_blobs', 1); } catch (e) { return reject(e); }
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains('blobs')) req.result.createObjectStore('blobs');
+    };
+    req.onsuccess = () => { _idb = req.result; resolve(_idb); };
+    req.onerror   = () => reject(req.error);
+  });
+}
+function idbPut(key, val) {
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction('blobs', 'readwrite');
+    const store = tx.objectStore('blobs');
+    if (val == null) store.delete(key); else store.put(val, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = tx.onabort = () => reject(tx.error);
+  }));
+}
+function idbGetAll() {
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const out = {};
+    const req = db.transaction('blobs', 'readonly').objectStore('blobs').openCursor();
+    req.onsuccess = () => { const c = req.result; if (c) { out[c.key] = c.value; c.continue(); } else resolve(out); };
+    req.onerror = () => reject(req.error);
+  }));
+}
+
+function bkeyPrefix() { return (currentUser || 'data') + '|'; }
+// 当前所有大文件的目标键值（null 表示应删除）
+function blobTargets() {
+  const pre = bkeyPrefix(), t = {};
+  for (const p of (state.products || [])) {
+    t[pre + 'pimg|' + p.id] = p.image || null;
+    t[pre + 'pman|' + p.id] = p.manualFile || null;
+  }
+  const s = state.settings || {};
+  t[pre + 'logo']  = s.logo  || null;
+  t[pre + 'stamp'] = s.stamp || null;
+  return t;
+}
+// 把大文件写入 IDB（仅写有变化的；并清理已删除产品的孤儿键）
+function persistBlobs() {
+  let targets;
+  try { targets = blobTargets(); } catch (e) { return Promise.resolve(); }
+  const ops = [], pre = bkeyPrefix();
+  for (const k in targets) {
+    if (_blobWritten[k] === targets[k]) continue;
+    const v = targets[k];
+    ops.push(idbPut(k, v).then(() => { _blobWritten[k] = v; }));
+  }
+  for (const k in _blobWritten) {
+    if (k.indexOf(pre) === 0 && !(k in targets)) {
+      ops.push(idbPut(k, null).then(() => { delete _blobWritten[k]; }));
+    }
+  }
+  return Promise.all(ops).catch(e => console.error('IndexedDB 写入失败', e));
+}
+// 从 IDB 把大文件回填进内存 state
+async function hydrateBlobs() {
+  let all;
+  try { all = await idbGetAll(); } catch (e) { return; }
+  const pre = bkeyPrefix();
+  for (const p of (state.products || [])) {
+    const ik = pre + 'pimg|' + p.id, mk = pre + 'pman|' + p.id;
+    if (all[ik] != null) { p.image = all[ik]; _blobWritten[ik] = all[ik]; }
+    if (all[mk] != null) { p.manualFile = all[mk]; _blobWritten[mk] = all[mk]; }
+  }
+  const s = state.settings || (state.settings = {});
+  if (all[pre + 'logo']  != null) { s.logo  = all[pre + 'logo'];  _blobWritten[pre + 'logo']  = s.logo; }
+  if (all[pre + 'stamp'] != null) { s.stamp = all[pre + 'stamp']; _blobWritten[pre + 'stamp'] = s.stamp; }
+}
+// 删除某用户在 IDB 中的全部大文件（导入覆盖时用）
+async function idbClearUser() {
+  const pre = bkeyPrefix();
+  let all; try { all = await idbGetAll(); } catch (e) { return; }
+  await Promise.all(Object.keys(all).filter(k => k.indexOf(pre) === 0).map(k => idbPut(k, null)));
+  for (const k in _blobWritten) if (k.indexOf(pre) === 0) delete _blobWritten[k];
+}
+// 写 localStorage 用的精简副本（剥离大文件，保留 logoRatio 等小字段）
+function buildLightState() {
+  const out = {};
+  for (const k in state) out[k] = state[k];
+  out.products = (state.products || []).map(p => {
+    const c = {}; for (const k in p) if (k !== 'image' && k !== 'manualFile') c[k] = p[k];
+    return c;
+  });
+  const s = {}; for (const k in (state.settings || {})) if (k !== 'logo' && k !== 'stamp') s[k] = state.settings[k];
+  out.settings = s;
+  return out;
+}
+
+async function load() {
   try {
     const key = currentUser ? `fts_data_${currentUser}` : 'fts_state';
     const s = localStorage.getItem(key);
@@ -2172,11 +2275,59 @@ function load() {
   if (!state.purchases)  state.purchases = [];
   if (!state.suppliers)  state.suppliers = [];
   if (!state.calcSchemes) state.calcSchemes = [];
+  await hydrateBlobs();
+  save(); // 迁移旧版内联大文件到 IDB + 写回精简结构（无变化时不重复写大文件）
 }
 
 function save() {
   const key = currentUser ? `fts_data_${currentUser}` : 'fts_state';
-  localStorage.setItem(key, JSON.stringify(state));
+  persistBlobs(); // 大文件异步写入 IndexedDB
+  try {
+    localStorage.setItem(key, JSON.stringify(buildLightState()));
+    return true;
+  } catch (e) {
+    const quota = e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014);
+    if (quota) {
+      if (confirm('⚠️ 浏览器存储空间已满，本次保存失败！\n\n业务数据（产品/订单/报价等）过多导致。\n建议先导出备份留存。\n\n点「确定」立即导出当前数据备份。')) {
+        try { exportData(); } catch (_) {}
+      }
+    } else {
+      alert('保存失败：' + (e && e.message ? e.message : e));
+    }
+    return false;
+  }
+}
+
+// ── 备份时间追踪 & 存储用量 ──
+function backupKey() { return `fts_lastbackup_${currentUser || 'data'}`; }
+function markBackupDone() {
+  try { localStorage.setItem(backupKey(), new Date().toISOString()); } catch (_) {}
+}
+function getLastBackup() {
+  const v = localStorage.getItem(backupKey());
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d) ? null : d;
+}
+function daysSinceBackup() {
+  const last = getLastBackup();
+  if (!last) return Infinity;
+  return Math.floor((Date.now() - last.getTime()) / 86400000);
+}
+function hasUserData() {
+  return (state.products||[]).length || (state.orders||[]).length ||
+         (state.quotes||[]).length || (state.customers||[]).length ||
+         (state.purchases||[]).length;
+}
+function storageUsageBytes() {
+  let total = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      total += (localStorage.getItem(k) || '').length + (k ? k.length : 0);
+    }
+  } catch (_) {}
+  return total * 2; // UTF-16: 每字符约 2 字节
 }
 
 // ═══════════════════════════════════════
@@ -3386,6 +3537,7 @@ function loadSettings() {
   renderColorSwatches();
   renderDocImagePreview('logo');
   renderDocImagePreview('stamp');
+  renderBackupStatus();
 }
 
 function renderColorSwatches() {
@@ -3496,6 +3648,9 @@ function exportData() {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  markBackupDone();
+  dismissBackupToast();
+  renderBackupStatus();
 }
 
 function importData(input) {
@@ -3535,16 +3690,88 @@ function importData(input) {
     state.calcSchemes = Array.isArray(d.calcSchemes) ? d.calcSchemes : [];
     state.settings   = (d.settings && typeof d.settings === 'object') ? d.settings : {};
     state.editingProductId = null;
-    save();
-    input.value = '';
-    alert('导入成功！数据已恢复。');
-    location.reload();
+    // 先清空旧的 IDB 大文件并写入新数据，确保 reload 不会打断异步写入
+    (async () => {
+      _blobWritten = {};
+      await idbClearUser();
+      await persistBlobs();
+      save();
+      input.value = '';
+      alert('导入成功！数据已恢复。');
+      location.reload();
+    })();
   };
   reader.onerror = function() {
     alert('导入失败：无法读取文件。');
     input.value = '';
   };
   reader.readAsText(file);
+}
+
+// ── 备份提醒浮窗 ──
+function checkBackupReminder() {
+  if (!hasUserData()) return;
+  if (daysSinceBackup() < 7) return;
+  showBackupToast();
+}
+function showBackupToast() {
+  if (document.getElementById('backup-toast')) return;
+  const last = getLastBackup();
+  const d = daysSinceBackup();
+  const msg = last ? `距上次备份已 ${d} 天，建议导出最新数据。` : '您还从未备份过数据，清除浏览器记录将丢失全部信息。';
+  const el = document.createElement('div');
+  el.id = 'backup-toast';
+  el.style.cssText = 'position:fixed;right:20px;bottom:20px;z-index:9999;width:300px;background:#fff;border:1px solid var(--border);border-left:4px solid var(--warning);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:14px 16px;font-size:13px;color:var(--text)';
+  el.innerHTML =
+    '<div style="font-weight:600;margin-bottom:6px">🔔 数据备份提醒</div>' +
+    '<div style="color:var(--text-secondary);line-height:1.6;margin-bottom:10px">' + escHtml(msg) + '</div>' +
+    '<div style="display:flex;gap:8px">' +
+      '<button class="btn btn-primary btn-sm" onclick="exportData()">立即备份</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="dismissBackupToast()">稍后</button>' +
+    '</div>';
+  document.body.appendChild(el);
+}
+function dismissBackupToast() {
+  const el = document.getElementById('backup-toast');
+  if (el) el.remove();
+}
+
+// ── 设置页：备份状态 & 存储用量 ──
+async function renderBackupStatus() {
+  const el = document.getElementById('backup-status');
+  if (!el) return;
+  const last = getLastBackup();
+  const lastTxt = last
+    ? `${last.toLocaleString('zh-CN')}（${daysSinceBackup()} 天前）`
+    : '<span style="color:var(--danger)">从未备份</span>';
+
+  // 优先用浏览器存储估算（涵盖 IndexedDB 中的图片/说明书 + localStorage）
+  let usedMB, quotaMB, pct;
+  try {
+    if (navigator.storage && navigator.storage.estimate) {
+      const est = await navigator.storage.estimate();
+      usedMB  = est.usage / 1024 / 1024;
+      quotaMB = est.quota / 1024 / 1024;
+      pct = est.quota ? Math.min(100, Math.round(est.usage / est.quota * 100)) : 0;
+    }
+  } catch (_) {}
+  if (usedMB == null) { // 回退：仅 localStorage，按 ~5MB 估算
+    usedMB = storageUsageBytes() / 1024 / 1024; quotaMB = 5;
+    pct = Math.min(100, Math.round(usedMB / 5 * 100));
+  }
+  const quotaTxt = quotaMB >= 1024 ? (quotaMB/1024).toFixed(1) + ' GB' : Math.round(quotaMB) + ' MB';
+  const barColor = pct >= 85 ? 'var(--danger)' : pct >= 60 ? 'var(--warning)' : 'var(--success)';
+  el.innerHTML =
+    `<div style="margin-bottom:8px">上次备份：${lastTxt}</div>` +
+    `<div style="display:flex;align-items:center;gap:8px">` +
+      `<span style="white-space:nowrap">存储用量：${usedMB.toFixed(1)} MB / ${quotaTxt}</span>` +
+      `<span style="flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden;min-width:80px">` +
+        `<span style="display:block;height:100%;width:${pct}%;background:${barColor}"></span>` +
+      `</span>` +
+      `<span style="color:${barColor};font-weight:600">${pct}%</span>` +
+    `</div>` +
+    `<div style="color:var(--text-secondary);margin-top:6px">图片与 PDF 说明书已存入浏览器 IndexedDB（容量可达数 GB），不再占用 5MB 的本地存储上限。</div>` +
+    (pct >= 85 ? `<div style="color:var(--danger);margin-top:4px">⚠️ 空间接近上限，建议导出备份后清理部分图片/说明书。</div>` : '');
 }
 
 // ═══════════════════════════════════════
@@ -3672,7 +3899,7 @@ function initCSDLists() {
   const pList = document.getElementById('csd-q-payment-list');
   if (pList) pList.innerHTML = CSD_PAYMENTS.map(p =>
     `<div class="csd-item${p.value==='T/T 30% deposit'?' selected':''}"
-          onclick="pickCSD('csd-q-payment',${JSON.stringify(p.value)},${JSON.stringify(p.label+' · '+p.sub)})">
+          onclick="pickCSD('csd-q-payment',${escHtml(JSON.stringify(p.value))},${escHtml(JSON.stringify(p.label+' · '+p.sub))})">
        <span class="csd-item-label">
          ${escHtml(p.label)}<br><span class="csd-item-sub">${escHtml(p.sub)}</span>
        </span>
@@ -5160,8 +5387,7 @@ initCSDLists();
 
 if (checkSession()) {
   // 已有登录会话，直接进入
-  load();
-  renderDashboard();
+  load().then(() => { renderDashboard(); checkBackupReminder(); });
 }
 // 否则 auth-overlay 保持显示，等用户登录
 </script>
